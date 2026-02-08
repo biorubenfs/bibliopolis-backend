@@ -1,0 +1,9 @@
+site_name: Bibliopolis API
+
+theme:
+  name: material
+
+nav:
+  - Inicio: index.md
+  - API:
+      - Auth: api/auth.md
