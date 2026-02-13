@@ -8,6 +8,8 @@ Este endpoint registra un nuevo usuario en el sistema. Al completarse exitosamen
 
 Crea una nueva cuenta de usuario en el sistema.
 
+### Body
+
 ```json
 {
   "email": "usuario@ejemplo.com",
@@ -48,6 +50,8 @@ Los datos proporcionados no son válidos (email inválido, campos faltantes, etc
 ## POST /auth/login
 
 Autentica a un usuario existente verificando sus credenciales. Si las credenciales son correctas, se genera un token JWT que se devuelve al cliente mediante una cookie `access_token`.
+
+### Body
 
 ```json
 {
