@@ -18,11 +18,11 @@ Crea una nueva cuenta de usuario en el sistema.
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `email` | string | Sí | Email del usuario. Debe ser un email válido |
-| `password` | string | Sí | Contraseña del usuario |
-| `name` | string | Sí | Nombre completo del usuario |
+| Campo      | Tipo   | Requerido | Descripción                                 |
+| ---------- | ------ | --------- | ------------------------------------------- |
+| `email`    | string | Sí        | Email del usuario. Debe ser un email válido |
+| `password` | string | Sí        | Contraseña del usuario                      |
+| `name`     | string | Sí        | Nombre completo del usuario                 |
 
 ### Respuestas
 
@@ -32,10 +32,17 @@ Usuario registrado correctamente.
 
 ```json
 {
-  "id": "user_id",
-  "email": "usuario@ejemplo.com",
-  "name": "Nombre del Usuario",
-  "role": "user"
+  "results": {
+    "type": "users",
+    "id": "01KHF81YFVSR13E8ZAC3WVKNPZ",
+    "attributes": {
+      "name": "username",
+      "email": "user@email.com",
+      "role": "regular",
+      "createdAt": "2026-02-14T23:33:56.859Z",
+      "updatedAt": "2026-02-14T23:33:56.859Z"
+    }
+  }
 }
 ```
 
@@ -60,23 +67,30 @@ Autentica a un usuario existente verificando sus credenciales. Si las credencial
 }
 ```
 
-| Campo | Tipo | Requerido | Descripción |
-|-------|------|-----------|-------------|
-| `email` | string | Sí | Email del usuario registrado |
-| `password` | string | Sí | Contraseña del usuario |
+| Campo      | Tipo   | Requerido | Descripción                  |
+| ---------- | ------ | --------- | ---------------------------- |
+| `email`    | string | Sí        | Email del usuario registrado |
+| `password` | string | Sí        | Contraseña del usuario       |
 
 ### Respuestas
 
 #### 200 OK
 
-Login exitoso.
+Login exitoso. Devuelve el usuario.
 
 ```json
 {
-  "id": "user_id",
-  "email": "usuario@ejemplo.com",
-  "name": "Nombre del Usuario",
-  "role": "user"
+  "results": {
+    "type": "users",
+    "id": "01J9BK7YX0D5NHHBN70Q4N7P69",
+    "attributes": {
+      "name": "admin01",
+      "email": "admin01@email.com",
+      "role": "admin",
+      "createdAt": "2000-01-01T00:00:00.000Z",
+      "updatedAt": "2000-01-01T00:00:00.000Z"
+    }
+  }
 }
 ```
 
@@ -84,13 +98,32 @@ Login exitoso.
 
 Los datos proporcionados no son válidos (formato incorrecto).
 
+```json
+{
+  "statusCode": 400,
+  "errorCode": "BODY VALIDATION ERROR",
+  "message": "invalid body",
+  "validationError": [
+    {
+      "code": "invalid_type",
+      "expected": "string",
+      "received": "undefined",
+      "path": ["password"],
+      "message": "Required"
+    }
+  ]
+}
+```
+
 #### 403 Forbidden
 
 Email o contraseña incorrectos.
 
 ```json
 {
-  "error": "invalid email or password"
+  "statusCode": 403,
+  "errorCode": "INVALID CREDENTIALS ERROR",
+  "message": "invalid email or password"
 }
 ```
 
