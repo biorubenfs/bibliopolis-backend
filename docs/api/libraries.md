@@ -16,7 +16,7 @@ Crea una nueva biblioteca para el usuario autenticado.
 ```
 
 | Campo         | Tipo   | Requerido | Descripción                  |
-|---------------|--------|-----------|------------------------------|
+| ------------- | ------ | --------- | ---------------------------- |
 | `name`        | string | Sí        | Nombre de la biblioteca      |
 | `description` | string | Sí        | Descripción de la biblioteca |
 
@@ -28,19 +28,51 @@ Biblioteca creada correctamente.
 
 ```json
 {
-  "id": "library_id",
-  "name": "Nombre de la biblioteca",
-  "description": "Descripción de la biblioteca",
-  "userId": "user_id",
-  "books": [],
-  "createdAt": "2024-01-01T00:00:00.000Z",
-  "updatedAt": "2024-01-01T00:00:00.000Z"
+  "results": {
+    "type": "libraries",
+    "id": "01J9W8VR2CFZW8PJ1Q8Y4Y5WEX",
+    "attributes": {
+      "name": "sample first library",
+      "description": "description of the sample first library",
+      "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+      "books": [],
+      "createdAt": "2024-10-10T22:30:16.908Z",
+      "updatedAt": "2024-10-10T22:30:16.908Z"
+    }
+  }
+}
+```
+
+#### 400 Bad Request
+
+```json
+{
+  "statusCode": 400,
+  "errorCode": "BODY VALIDATION ERROR",
+  "message": "invalid body",
+  "validationError": [
+    {
+      "code": "invalid_type",
+      "expected": "string",
+      "received": "undefined",
+      "path": ["name"],
+      "message": "Required"
+    }
+  ]
 }
 ```
 
 #### 409 Conflict
 
 Ya existe una biblioteca con ese nombre para el usuario.
+
+```json
+{
+  "statusCode": 409,
+  "errorCode": "CONFLICT ERROR",
+  "message": "user has already a library with name testing"
+}
+```
 
 ---
 
@@ -54,13 +86,22 @@ Obtiene la información de una biblioteca específica.
 
 ```json
 {
-  "id": "library_id",
-  "name": "Nombre de la biblioteca",
-  "description": "Descripción de la biblioteca",
-  "userId": "user_id",
-  "books": ["userBook_id1", "userBook_id2"],
-  "createdAt": "2024-01-01T00:00:00.000Z",
-  "updatedAt": "2024-01-01T00:00:00.000Z"
+  "results": {
+    "type": "libraries",
+    "id": "01J9W8VR2CFZW8PJ1Q8Y4Y5WEX",
+    "attributes": {
+      "name": "sample first library",
+      "description": "description of the sample first library",
+      "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+      "books": [
+        "01J9W9P6M5S0VRKVSRX3Q9T3W7",
+        "01J9W9PGE06ANTMG3Y24KGCAFF",
+        "01J9WA3W9TE5NG1H21PTK9VS4Q"
+      ],
+      "createdAt": "2000-01-01T00:00:00.000Z",
+      "updatedAt": "2000-01-01T00:00:00.000Z"
+    }
+  }
 }
 ```
 
@@ -93,14 +134,18 @@ Lista las bibliotecas del usuario autenticado (o todas si es admin). Permite pag
   "results": [
     {
       "type": "libraries",
-      "id": "library_id",
+      "id": "01J9W8VR2CFZW8PJ1Q8Y4Y5WEX",
       "attributes": {
-        "name": "Nombre de la biblioteca",
-        "description": "Descripción de la biblioteca",
-        "userId": "user_id",
-        "books": ["userBook_id1"],
-        "createdAt": "2024-01-01T00:00:00.000Z",
-        "updatedAt": "2024-01-01T00:00:00.000Z"
+        "name": "sample first library",
+        "description": "description of the sample first library",
+        "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+        "books": [
+          "01J9W9P6M5S0VRKVSRX3Q9T3W7",
+          "01J9W9PGE06ANTMG3Y24KGCAFF",
+          "01J9WA3W9TE5NG1H21PTK9VS4Q"
+        ],
+        "createdAt": "2000-01-01T00:00:00.000Z",
+        "updatedAt": "2000-01-01T00:00:00.000Z"
       }
     }
   ],
@@ -146,9 +191,9 @@ Añade un libro a la biblioteca. Si el libro no existe en el sistema, se consult
 }
 ```
 
-| Campo   | Tipo   | Requerido | Descripción                |
-|---------|--------|-----------|----------------------------|
-| `isbn`  | string | Sí        | ISBN-13 del libro a añadir |
+| Campo  | Tipo   | Requerido | Descripción                |
+| ------ | ------ | --------- | -------------------------- |
+| `isbn` | string | Sí        | ISBN-13 del libro a añadir |
 
 ### Respuestas
 
@@ -193,4 +238,3 @@ Lista los libros de una biblioteca específica (ver documentación de user-books
 - Solo el usuario propietario o un administrador puede acceder, modificar o eliminar una biblioteca.
 - La búsqueda de libros utiliza OpenLibrary si el libro no existe previamente en el sistema.
 - Los identificadores de libros en la biblioteca corresponden a entidades user-book.
-
