@@ -7,3 +7,4 @@ nav:
   - Inicio: index.md
   - API:
       - Auth: api/auth.md
+      - Libraries: api/libraries.md
