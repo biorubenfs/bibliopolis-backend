@@ -129,6 +129,42 @@ Email o contraseña incorrectos.
 
 ---
 
+## GET /auth/me
+
+Recupera datos del usuario a partir del access token de la cookie.
+
+### Respuestas
+
+#### 200
+
+```json
+{
+  "results": {
+    "type": "users",
+    "id": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+    "attributes": {
+      "name": "user01",
+      "email": "user01@email.com",
+      "role": "regular",
+      "createdAt": "2000-01-01T00:00:00.000Z",
+      "updatedAt": "2000-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+#### 401
+
+```json
+{
+  "statusCode": 401,
+  "errorCode": "TOKEN NOT PROVIDED ERROR",
+  "message": "token not provided"
+}
+```
+
+---
+
 ## POST /auth/logout
 
 Cierra la sesión del usuario actual eliminando su token de autenticación.
