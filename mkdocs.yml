@@ -8,3 +8,4 @@ nav:
   - API:
       - Auth: api/auth.md
       - Libraries: api/libraries.md
+      - User Books: api/user-books.md
