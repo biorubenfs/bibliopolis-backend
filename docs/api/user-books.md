@@ -131,7 +131,7 @@ Permite editar un libro de usuario. Solo permite modificar los campos `rating` y
 
 ```json
 {
-  "rating": "5",
+  "rating": 5,
   "notes": "a simple note about the book"
 }
 ```
