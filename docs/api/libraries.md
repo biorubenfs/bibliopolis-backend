@@ -227,12 +227,6 @@ El libro no existe en la biblioteca.
 
 ---
 
-## GET /libraries/:id/books
-
-Lista los libros de una biblioteca específica (ver documentación de user-books para el formato de respuesta).
-
----
-
 ## Notas de implementación
 
 - Solo el usuario propietario o un administrador puede acceder, modificar o eliminar una biblioteca.
