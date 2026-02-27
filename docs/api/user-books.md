@@ -54,7 +54,7 @@ Devuelve todos los libros de usuario. Admite paginación y filtros por bibliotec
 ```json
 {
   "statusCode": 400,
-  "errorCode": "BODY VALIDATION ERROR",
+  "errorCode": "VALIDATION ERROR",
   "message": "invalid body",
   "validationError": [
     {
@@ -175,7 +175,7 @@ Errores validación en la el body de la petición.
 ```json
 {
   "statusCode": 400,
-  "errorCode": "BODY VALIDATION ERROR",
+  "errorCode": "VALIDATION ERROR",
   "message": "invalid body",
   "validationError": [
     {
@@ -192,7 +192,7 @@ Errores validación en la el body de la petición.
 ```json
 {
   "statusCode": 400,
-  "errorCode": "BODY VALIDATION ERROR",
+  "errorCode": "VALIDATION ERROR",
   "message": "invalid body",
   "validationError": [
     {
@@ -209,7 +209,7 @@ Errores validación en la el body de la petición.
 ```json
 {
   "statusCode": 400,
-  "errorCode": "BODY VALIDATION ERROR",
+  "errorCode": "VALIDATION ERROR",
   "message": "invalid body",
   "validationError": [
     {

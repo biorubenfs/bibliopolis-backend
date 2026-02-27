@@ -48,7 +48,7 @@ Biblioteca creada correctamente.
 ```json
 {
   "statusCode": 400,
-  "errorCode": "BODY VALIDATION ERROR",
+  "errorCode": "VALIDATION ERROR",
   "message": "invalid body",
   "validationError": [
     {

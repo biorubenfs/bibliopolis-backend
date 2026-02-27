@@ -9,3 +9,4 @@ nav:
       - Auth: api/auth.md
       - Libraries: api/libraries.md
       - User Books: api/user-books.md
+      - External: api/external.md
