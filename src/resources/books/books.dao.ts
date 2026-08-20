@@ -14,8 +14,8 @@ class BooksDao extends Dao<DBBook> {
   }
 
   async init (): Promise<void> {
-    await this.collection.createIndex({ isbn13: 1 }, { unique: true, sparse: true })
-    await this.collection.createIndex({ isbn10: 1 }, { unique: true, sparse: true })
+    await this.collection.createIndex({ isbn13: 1 }, { unique: true })
+    await this.collection.createIndex({ isbn10: 1 }, { unique: true, partialFilterExpression: { isbn10: { $type: 'string' } } })
   }
 
   async create (newBook: NewBookDao): Promise<BookEntity> {

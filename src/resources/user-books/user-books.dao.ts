@@ -92,6 +92,11 @@ class UserBooksDao extends Dao<DBUserBook> {
     super('user_books')
   }
 
+  async init(): Promise<void> {
+    await this.collection.createIndex({ userId: 1, bookId: 1 }, { unique: true })
+    await this.collection.createIndex({ libraries: 1 })
+  }
+
   async findById (id: string): Promise<UserBookEntity | null> {
     const userBook = await this.collection.findOne({ _id: id })
 
