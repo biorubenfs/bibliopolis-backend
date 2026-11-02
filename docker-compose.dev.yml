@@ -1,3 +1,4 @@
+name: bibliopolis-dev
 services:
   app:
     container_name: bibliopolis-dev

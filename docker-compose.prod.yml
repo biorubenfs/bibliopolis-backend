@@ -1,3 +1,4 @@
+name: bibliopolis-prod
 services:
   app:
     container_name: bibliopolis-prod
