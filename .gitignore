@@ -7,6 +7,9 @@ dist
 .env.*.local
 coverage
 
+# MkDocs build output
+site/
+
 # Logs
 *.log
 npm-debug.log*

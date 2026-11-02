@@ -1,0 +1,14 @@
+site_name: Bibliopolis API
+
+theme:
+  name: readthedocs
+
+nav:
+  - Inicio: index.md
+  - API:
+      - Auth: api/auth.md
+      - Users: api/users.md
+      - Books: api/books.md
+      - Libraries: api/libraries.md
+      - User Books: api/user-books.md
+      - External: api/external.md
