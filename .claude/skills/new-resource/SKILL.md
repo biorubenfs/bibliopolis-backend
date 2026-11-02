@@ -18,4 +18,5 @@ Argumento: el nombre del recurso en kebab-case y plural (p. ej. `loans`). Si no 
    - `<nombre>.router.ts` — handlers envueltos en `handler()`, con los validadores de `src/middlewares/`.
 3. Registrar el router en `src/server.ts` (después de `checkJwt` salvo que sea público) y llamar a `<nombre>Dao.init()` en `src/app.ts` si tiene índices.
 4. Añadir fixtures en `data/test-mock-data/` y una entrada en `MockDataSet`, y crear `src/tests/integration/<nombre>.test.ts` cubriendo los casos de éxito, 401/403/404 y los errores de validación.
-5. Ejecutar `pnpm run build`, `pnpm run lint` y `pnpm run test:integration src/tests/integration/<nombre>.test.ts`. Corregir hasta que todo pase y después resumir los endpoints creados.
+5. Documentar el recurso en `docs/api/<nombre>.md` siguiendo la sección "Documentación" de `CLAUDE.md` (tomar `docs/api/libraries.md` como plantilla), añadirlo al `nav` de `mkdocs.yml` y a la tabla de recursos de `docs/index.md`, y añadir los nuevos `ApiRestErrorCode` a la tabla de errores.
+6. Ejecutar `pnpm run build`, `pnpm run lint`, `pnpm run test:integration src/tests/integration/<nombre>.test.ts` y `mkdocs build --strict`. Corregir hasta que todo pase y después resumir los endpoints creados.

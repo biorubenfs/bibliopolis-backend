@@ -20,6 +20,9 @@ pnpm run test:integration # solo src/tests/integration (replica set de Mongo en 
 pnpm run test:coverage
 
 pnpm run seed             # carga data/seed/*.json en MONGO_URI (hacer build antes)
+
+pnpm run docs:dev         # mkdocs serve en http://127.0.0.1:8001 (el 8000 lo ocupa Portainer)
+mkdocs build --strict     # comprueba la documentación (falla con enlaces rotos o páginas fuera del nav)
 ```
 
 Ejecutar un único fichero de test / un único test (los scripts `test*` establecen `ENVIRONMENT=test` y `JWT_ACCESS_TOKEN_SECRET=test`, que son obligatorios):
@@ -83,8 +86,19 @@ Añadir un recurso nuevo: copiar las capas de `books/` o `libraries/`, registrar
 - Los mensajes de commit tienen solo asunto (una línea), sin cuerpo ni trailers (tampoco `Co-Authored-By`), salvo que el usuario indique lo contrario.
 - Antes de dar un cambio por terminado, ejecutar `pnpm run build`, `pnpm run lint` y los tests relevantes (`test:unit` / `test:integration`). Son las mismas comprobaciones que ejecuta la CI.
 - Todo cambio de comportamiento o corrección de bug va acompañado de un test de integración (o unitario si es una función pura). Para un bug, escribir primero el test que falla.
+- Todo cambio en la API (endpoint nuevo o eliminado, body, query params, respuesta, códigos de error, permisos) se documenta en `docs/` en la misma rama, siguiendo la sección [Documentación](#documentación). Un cambio de la API no está terminado si la documentación no está al día.
 - Limitar los cambios a la tarea; proponer las refactorizaciones no relacionadas en lugar de hacerlas.
 - El usuario escribe en español y las respuestas a él van en español; el código, los comentarios, los commits y los PRs van en inglés.
+
+## Documentación
+
+La documentación de la API está en `docs/` (MkDocs, tema `readthedocs`) y se publica en Read the Docs (`.readthedocs.yml`, dependencias en `docs/requirements.txt`). Está escrita en español.
+
+- Una página por recurso en `docs/api/<recurso>.md`; `docs/index.md` recoge la autenticación, el formato de respuestas, la paginación y la tabla de códigos de error.
+- Cada página empieza con la tabla de atributos de la entidad y, por endpoint (`## MÉTODO /ruta`), documenta: descripción y permisos, body (ejemplo JSON + tabla `Campo | Tipo | Requerido | Descripción`, con los límites de los esquemas zod), query params y respuestas (`#### <status> <texto>` con ejemplo JSON). Usar `libraries.md` como referencia.
+- Los ejemplos deben salir del código real (`attributes()` de la entidad, mensajes de las clases de error), no inventarse.
+- Al añadir una página nueva, incluirla en `nav` de `mkdocs.yml` y en la tabla de recursos de `docs/index.md`. Un `ApiRestErrorCode` nuevo se añade a la tabla de errores de `docs/index.md`.
+- Comprobar con `mkdocs build --strict` antes de dar el cambio por terminado.
 
 ## Tests
 
