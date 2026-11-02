@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/biorubenfs/bibliopolis:latest
+    image: ghcr.io/biorubenfs/bibliopolis-backend:latest
     restart: unless-stopped
     env_file:
       - .env
