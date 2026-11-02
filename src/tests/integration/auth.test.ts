@@ -91,6 +91,39 @@ describe('login tests', () => {
   })
 })
 
+describe('login rate limit', () => {
+  // The test client connects from loopback, which is a trusted proxy, so X-Forwarded-For sets the client IP
+  async function loginFrom (ip: string, password: string): Promise<Response> {
+    return await fetch(loginUrl, {
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': ip },
+      method: 'POST',
+      body: JSON.stringify({ email: 'user01@email.com', password })
+    })
+  }
+
+  it('POST /auth/login - should block an IP after 10 failed attempts', async () => {
+    for (let i = 0; i < 10; i++) {
+      expect((await loginFrom('203.0.113.1', 'WrongPassword1!')).status).toBe(403)
+    }
+
+    const response = await loginFrom('203.0.113.1', 'Password123!')
+    const body = await response.json()
+
+    expect(response.status).toBe(429)
+    expect(body.statusCode).toBe(429)
+    expect(body.errorCode).toBe(ApiRestErrorCode.TooManyRequests)
+
+    // Other IPs are not affected
+    expect((await loginFrom('203.0.113.2', 'Password123!')).status).toBe(200)
+  })
+
+  it('POST /auth/login - should not count successful logins', async () => {
+    for (let i = 0; i < 12; i++) {
+      expect((await loginFrom('203.0.113.3', 'Password123!')).status).toBe(200)
+    }
+  })
+})
+
 describe('removed refresh token endpoints', () => {
   it('POST /auth/refresh - should not exist', async () => {
     const response = await fetch(refreshUrl, { method: 'POST' })

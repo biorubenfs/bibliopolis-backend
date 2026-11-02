@@ -8,5 +8,6 @@ export enum ApiRestErrorCode {
   ConflictError = 'CONFLICT ERROR',
   PermissionError = 'PERMISSION ERROR',
   InvalidPassword = 'INVALID PASSWORD',
-  ApiBooksError = 'BOOKS API ERROR'
+  ApiBooksError = 'BOOKS API ERROR',
+  TooManyRequests = 'TOO MANY REQUESTS ERROR'
 }

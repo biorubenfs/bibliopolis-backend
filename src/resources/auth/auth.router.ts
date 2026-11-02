@@ -6,10 +6,11 @@ import authService from './auth.service.js'
 import { HttpStatusCode } from '../../types.js'
 import { checkJwt } from '../../middlewares/jwt.middleware.js'
 import usersService from '../users/users.service.js'
+import { loginLimiter } from '../../middlewares/rate-limiters.middleware.js'
 
 const authRouter = Router()
 
-authRouter.post('/login', bodyValidator(loginSchema), handler(async (req) => {
+authRouter.post('/login', loginLimiter, bodyValidator(loginSchema), handler(async (req) => {
   const result = await authService.login(req.body)
 
   return { status: HttpStatusCode.OK, data: result }
