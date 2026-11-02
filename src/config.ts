@@ -30,18 +30,9 @@ export default {
     email: parseString(process.env.DEFAULT_ADMIN_EMAIL),
     password: parseString(process.env.DEFAULT_ADMIN_PASSWORD)
   },
-  accessToken: {
+  jwt: {
     secret: parseString(process.env.JWT_ACCESS_TOKEN_SECRET),
-    expirationTime: parseString(process.env.JWT_ACCESS_TOKEN_EXPIRATION, '15m')
-  },
-  refreshToken: {
-    expirationTime: parseString(process.env.REFRESH_TOKEN_EXPIRATION_TIME, '7d'),
-    cookieOptions: {
-      httpOnly: true,
-      secure: parseBoolean(process.env.REFRESH_TOKEN_COOKIE_SECURE, false),
-      sameSite: parseString(process.env.REFRESH_TOKEN_COOKIE_SAME_SITE, 'lax') as 'strict' | 'lax' | 'none',
-      path: process.env.BACKEND_URL != null ? `${process.env.BACKEND_URL}/auth` : '/auth'
-    }
+    expirationTime: parseString(process.env.JWT_EXPIRATION, '7d')
   },
   hashRounds: parseNumber(process.env.HASH_ROUNDS, 10),
   openLibrary: {

@@ -5,7 +5,7 @@ function buildAuthorizationHeader (accessToken: string): string {
   return `Bearer ${accessToken}`
 }
 
-async function login (email: string, password: string): Promise<{ accessToken: string, refreshTokenCookie: string }> {
+async function login (email: string, password: string): Promise<{ accessToken: string }> {
   const loginUrl = new URL('/auth/login', TESTS_BASE_URL)
   const response = await fetch(loginUrl, {
     headers: { 'Content-Type': 'application/json' },
@@ -14,12 +14,9 @@ async function login (email: string, password: string): Promise<{ accessToken: s
   })
 
   const body = await response.json()
-  const cookies = response.headers.getSetCookie()
-  const refreshTokenCookie = cookies.find(cookie => cookie.startsWith('refresh_token=')) ?? ''
 
   return {
-    accessToken: body.results.attributes.accessToken,
-    refreshTokenCookie
+    accessToken: body.results.attributes.accessToken
   }
 }
 
