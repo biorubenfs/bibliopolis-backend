@@ -31,3 +31,9 @@ export class BooksApiError extends ApiError {
     super(ApiRestErrorCode.ApiBooksError, 404, message)
   }
 }
+
+export class TooManyRequestsError extends ApiError {
+  constructor (message: string) {
+    super(ApiRestErrorCode.TooManyRequests, 429, message)
+  }
+}
