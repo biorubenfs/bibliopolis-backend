@@ -1,17 +1,36 @@
 # API de User Books
 
-Esta entidad representa libros que el usuario ha agregado a alguna de sus bibliotecas. 
+Un user book es el ejemplar de un libro que tiene un usuario. Se crea al añadir un libro a una biblioteca ([`POST /libraries/:id/books`](libraries.md#post-librariesidbooks)) y puede pertenecer a varias bibliotecas del mismo usuario. Guarda una copia de los datos del libro (título, autores, portada e ISBN) junto con la valoración y las notas del usuario.
 
-Los servicios para su gestión son los siguientes.
+Atributos de un user book:
+
+| Campo          | Tipo        | Descripción                                      |
+| -------------- | ----------- | ------------------------------------------------ |
+| `libraries`    | string[]    | IDs de las bibliotecas que lo contienen          |
+| `bookId`       | string      | ID del libro en el catálogo ([books](books.md))  |
+| `bookTitle`    | string      | Título del libro                                 |
+| `bookAuthors`  | string[]    | Autores del libro                                |
+| `bookCoverUrl` | string/null | URL de la portada                                |
+| `bookIsbn13`   | string      | ISBN-13                                          |
+| `bookIsbn10`   | string/null | ISBN-10                                          |
+| `rating`       | number/null | Valoración del usuario (de 1 a 10)               |
+| `notes`        | string/null | Notas del usuario                                |
+| `userId`       | string      | ID del usuario propietario                       |
+| `createdAt`    | date        | Fecha de creación                                |
+| `updatedAt`    | date        | Fecha de la última modificación                  |
 
 ## GET /user-books
 
-Devuelve todos los libros de usuario. Admite paginación y filtros por biblioteca y por usuario en el caso de usuarios administradores.
+Lista los user books. Admite [paginación](../index.md#paginacion), filtros por biblioteca y por usuario, y búsqueda de texto.
+
+- Un usuario normal solo puede listar sus propios user books de sus bibliotecas. Si no indica `libraryId`, se listan los de todas sus bibliotecas.
+- Un administrador puede listar los de cualquier usuario y biblioteca.
 
 ### Query Params
 
-- `libraryId`: string (múltiple) — Acota búsqueda a una o varias bibliotecas
-- `userId`: string (opcional) — Acota listado a user-books de un usuario
+- `libraryId`: string (opcional, se puede repetir) — Acota la búsqueda a una o varias bibliotecas (`?libraryId=A&libraryId=B`)
+- `userId`: string (opcional) — Acota el listado a los user books de un usuario. Un usuario normal solo puede indicar su propio ID
+- `search`: string (opcional) — Busca en el título, los autores y los ISBN
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -51,18 +70,18 @@ Devuelve todos los libros de usuario. Admite paginación y filtros por bibliotec
 
 #### 400 Bad Request
 
+Query params no válidos.
+
 ```json
 {
   "statusCode": 400,
   "errorCode": "VALIDATION ERROR",
-  "message": "invalid body",
+  "message": "invalid query params",
   "validationError": [
     {
-      "code": "invalid_type",
-      "expected": "string",
-      "received": "undefined",
-      "path": ["name"],
-      "message": "Required"
+      "code": "custom",
+      "message": "limit must be a number > 0 and <= 100",
+      "path": ["limit"]
     }
   ]
 }
@@ -70,19 +89,55 @@ Devuelve todos los libros de usuario. Admite paginación y filtros por bibliotec
 
 #### 403 Forbidden
 
+Un usuario normal intenta listar los user books de otro usuario o de una biblioteca que no es suya.
+
 ```json
 {
   "statusCode": 403,
   "errorCode": "PERMISSION ERROR",
-  "message": "message"
+  "message": "user can only list books from own libraries"
 }
 ```
 
 ---
 
+## GET /user-books/download
+
+Descarga los libros de una biblioteca del usuario autenticado como fichero PDF o CSV.
+
+### Query Params
+
+- `libraryId`: string — ID de la biblioteca a exportar
+- `format`: string (opcional) — `pdf` (por defecto) o `csv`
+
+### Respuestas
+
+#### 200 OK
+
+Devuelve el fichero como descarga (`Content-Disposition: attachment`). El nombre del fichero es el de la biblioteca, sustituyendo los caracteres no alfanuméricos por `_`.
+
+| Formato | `Content-Type`             | Contenido                                                     |
+| ------- | -------------------------- | ------------------------------------------------------------- |
+| `pdf`   | `application/pdf`          | Listado de los libros de la biblioteca                        |
+| `csv`   | `text/csv; charset=utf-8`  | Columnas `Título`, `Autor/es`, `Isbn-13`, `Isbn-10`           |
+
+#### 400 Bad Request
+
+Falta `libraryId` o `format` no es `pdf` ni `csv`.
+
+#### 403 Forbidden
+
+La biblioteca pertenece a otro usuario.
+
+#### 404 Not Found
+
+La biblioteca no existe.
+
+---
+
 ## GET /user-books/:id
 
-Obtiene un libro de usuario concreto.
+Obtiene un user book del usuario autenticado.
 
 ### Respuestas
 
@@ -111,7 +166,9 @@ Obtiene un libro de usuario concreto.
 }
 ```
 
-#### 404 Not found
+#### 404 Not Found
+
+El user book no existe o pertenece a otro usuario.
 
 ```json
 {
@@ -125,7 +182,7 @@ Obtiene un libro de usuario concreto.
 
 ## PATCH /user-books/:id
 
-Permite editar un libro de usuario. Solo permite modificar los campos `rating` y `notes`:
+Modifica la valoración y las notas de un user book del usuario autenticado. Solo se pueden modificar los campos `rating` y `notes`, y ambos son obligatorios (se puede enviar `null` para borrarlos).
 
 ### Body
 
@@ -136,14 +193,16 @@ Permite editar un libro de usuario. Solo permite modificar los campos `rating` y
 }
 ```
 
-| Campo    | Tipo        | Requerido | Descripción          |
-| -------- | ----------- | --------- | -------------------- |
-| `rating` | number/null | Sí        | Puntuación del libro |
-| `notes`  | string/null | Sí        | Notas del libro      |
+| Campo    | Tipo        | Requerido | Descripción                                  |
+| -------- | ----------- | --------- | -------------------------------------------- |
+| `rating` | number/null | Sí        | Valoración del libro: entero de 1 a 10       |
+| `notes`  | string/null | Sí        | Notas sobre el libro (máx. 150 caracteres)   |
 
 ### Respuestas
 
 #### 200 OK
+
+Devuelve el user book actualizado.
 
 ```json
 {
@@ -158,8 +217,8 @@ Permite editar un libro de usuario. Solo permite modificar los campos `rating` y
       "bookCoverUrl": "https://covers.openlibrary.org/b/id/12861662-M.jpg",
       "bookIsbn13": "9781732539419",
       "bookIsbn10": null,
-      "rating": 10,
-      "notes": null,
+      "rating": 5,
+      "notes": "a simple note about the book",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -170,7 +229,7 @@ Permite editar un libro de usuario. Solo permite modificar los campos `rating` y
 
 #### 400 Bad Request
 
-Errores validación en la el body de la petición.
+Errores de validación en el body de la petición.
 
 ```json
 {
@@ -206,24 +265,9 @@ Errores validación en la el body de la petición.
 }
 ```
 
-```json
-{
-  "statusCode": 400,
-  "errorCode": "VALIDATION ERROR",
-  "message": "invalid body",
-  "validationError": [
-    {
-      "expected": "1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10",
-      "received": "undefined",
-      "code": "invalid_type",
-      "path": ["rating"],
-      "message": "Required"
-    }
-  ]
-}
-```
+#### 404 Not Found
 
-#### 404 Not found
+El user book no existe o pertenece a otro usuario.
 
 ```json
 {
@@ -234,3 +278,8 @@ Errores validación en la el body de la petición.
 ```
 
 ---
+
+## Notas de implementación
+
+- Los datos del libro (título, autores, portada, ISBN) se copian del catálogo al crear el user book y se mantienen sincronizados por la tarea semanal que completa autores y portadas.
+- Quitar un libro de una biblioteca o eliminar la biblioteca no borra el user book: solo se quita la biblioteca de su lista `libraries`.

@@ -1,62 +1,12 @@
 # API de Autenticación
 
-Este documento describe los endpoints disponibles para la autenticación de usuarios en la aplicación Bibliopolis.
+Este documento describe los endpoints de autenticación de Bibliopolis. La autenticación usa un único token JWT que el cliente envía en la cabecera `Authorization: Bearer <accessToken>` (ver [Autenticación](../index.md#autenticacion)).
 
-## POST /auth/signup
-
-Este endpoint registra un nuevo usuario en el sistema. Al completarse exitosamente el registro, se genera un token JWT que se devuelve al cliente mediante una cookie `access_token`.
-
-Crea una nueva cuenta de usuario en el sistema.
-
-### Body
-
-```json
-{
-  "email": "usuario@ejemplo.com",
-  "password": "contraseña_segura",
-  "name": "Nombre del Usuario"
-}
-```
-
-| Campo      | Tipo   | Requerido | Descripción                                 |
-| ---------- | ------ | --------- | ------------------------------------------- |
-| `email`    | string | Sí        | Email del usuario. Debe ser un email válido |
-| `password` | string | Sí        | Contraseña del usuario                      |
-| `name`     | string | Sí        | Nombre completo del usuario                 |
-
-### Respuestas
-
-#### 201 Created
-
-Usuario registrado correctamente.
-
-```json
-{
-  "results": {
-    "type": "users",
-    "id": "01KHF81YFVSR13E8ZAC3WVKNPZ",
-    "attributes": {
-      "name": "username",
-      "email": "user@email.com",
-      "role": "regular",
-      "createdAt": "2026-02-14T23:33:56.859Z",
-      "updatedAt": "2026-02-14T23:33:56.859Z"
-    }
-  }
-}
-```
-
-Se establece la cookie `access_token` con el token JWT de autenticación.
-
-#### 400 Bad Request
-
-Los datos proporcionados no son válidos (email inválido, campos faltantes, etc.).
-
----
+> El registro de usuarios no es público: los usuarios los crea un administrador con [`POST /users`](users.md#post-users).
 
 ## POST /auth/login
 
-Autentica a un usuario existente verificando sus credenciales. Si las credenciales son correctas, se genera un token JWT que se devuelve al cliente mediante una cookie `access_token`.
+Autentica a un usuario verificando sus credenciales. Si son correctas, devuelve un token JWT en el body de la respuesta. Es un endpoint público.
 
 ### Body
 
@@ -76,19 +26,14 @@ Autentica a un usuario existente verificando sus credenciales. Si las credencial
 
 #### 200 OK
 
-Login exitoso. Devuelve el usuario.
+Login correcto. Devuelve el token de acceso.
 
 ```json
 {
   "results": {
-    "type": "users",
-    "id": "01J9BK7YX0D5NHHBN70Q4N7P69",
+    "type": "auth",
     "attributes": {
-      "name": "admin01",
-      "email": "admin01@email.com",
-      "role": "admin",
-      "createdAt": "2000-01-01T00:00:00.000Z",
-      "updatedAt": "2000-01-01T00:00:00.000Z"
+      "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
     }
   }
 }
@@ -127,15 +72,27 @@ Email o contraseña incorrectos.
 }
 ```
 
+#### 429 Too Many Requests
+
+Se han superado los 10 intentos de login fallidos desde la misma IP en una ventana de 15 minutos. Los logins correctos no cuentan para el límite. La respuesta incluye las cabeceras estándar `RateLimit` / `RateLimit-Policy`.
+
+```json
+{
+  "statusCode": 429,
+  "errorCode": "TOO MANY REQUESTS ERROR",
+  "message": "Too many failed login attempts, please try again later"
+}
+```
+
 ---
 
 ## GET /auth/me
 
-Recupera datos del usuario a partir del access token de la cookie.
+Devuelve los datos del usuario autenticado a partir del token enviado en la cabecera `Authorization`.
 
 ### Respuestas
 
-#### 200
+#### 200 OK
 
 ```json
 {
@@ -146,6 +103,7 @@ Recupera datos del usuario a partir del access token de la cookie.
       "name": "user01",
       "email": "user01@email.com",
       "role": "regular",
+      "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -153,7 +111,9 @@ Recupera datos del usuario a partir del access token de la cookie.
 }
 ```
 
-#### 401
+#### 401 Unauthorized
+
+Token no enviado, no válido o caducado.
 
 ```json
 {
@@ -163,21 +123,21 @@ Recupera datos del usuario a partir del access token de la cookie.
 }
 ```
 
----
+#### 404 Not Found
 
-## POST /auth/logout
+El usuario del token ya no existe.
 
-Cierra la sesión del usuario actual eliminando su token de autenticación.
-
-### Respuestas
-
-#### 204 No Content
-
-Logout exitoso. La cookie `access_token` ha sido eliminada.
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "user not found"
+}
+```
 
 ---
 
 ## Notas de implementación
 
-- Todos los tokens JWT generados contienen el ID del usuario y su rol.
-- Las cookies se configuran según las opciones especificadas en la configuración de la aplicación.
+- El token JWT contiene el ID del usuario y su rol (`regular` o `admin`).
+- No hay refresh token ni logout en el servidor: para cerrar sesión el cliente descarta el token, que sigue siendo válido hasta que caduca (7 días por defecto, configurable con `JWT_EXPIRATION`).
