@@ -1,4 +1,3 @@
-import { CookieOptions } from 'express'
 import { Readable } from 'stream'
 import { Entity, EntityType, ResultMiscObject } from './entity.js'
 import { PaginationObject } from './types.js'
@@ -38,16 +37,6 @@ export class MiscResultObject {
   }
 }
 
-export class ClearCookieResultObject {
-  readonly name: string
-  readonly options: CookieOptions
-
-  constructor (name: string, options: CookieOptions) {
-    this.name = name
-    this.options = options
-  }
-}
-
 export class RedirectResultObject {
   readonly url: URL
 
@@ -58,25 +47,9 @@ export class RedirectResultObject {
 
 export class TokenResultObject {
   readonly accessToken: string
-  readonly refreshTokenCookie?: {
-    name: string
-    value: string
-    options: CookieOptions
-  }
 
-  constructor (accessToken: string, refreshToken?: string, refreshTokenOptions?: CookieOptions) {
+  constructor (accessToken: string) {
     this.accessToken = accessToken
-    if (refreshToken != null && refreshTokenOptions != null) {
-      this.refreshTokenCookie = {
-        name: 'refresh_token',
-        value: refreshToken,
-        options: refreshTokenOptions
-      }
-    }
-  }
-
-  hasRefreshToken (): boolean {
-    return this.refreshTokenCookie != null
   }
 
   toResult (): { type: string, attributes: { accessToken: string } } {

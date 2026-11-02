@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express'
-import { CollectionResultObject, SingleResultObject, MiscResultObject, ClearCookieResultObject, RedirectResultObject, TokenResultObject, StreamResultObject } from './results.js'
+import { CollectionResultObject, SingleResultObject, MiscResultObject, RedirectResultObject, TokenResultObject, StreamResultObject } from './results.js'
 import { Entity, EntityType } from './entity.js'
 import { HttpStatusCode } from './types.js'
 
@@ -8,7 +8,6 @@ type DataCustomController =
   SingleResultObject<Entity<EntityType>> |
   CollectionResultObject<Entity<EntityType>> |
   MiscResultObject |
-  ClearCookieResultObject |
   RedirectResultObject |
   TokenResultObject |
   StreamResultObject |
@@ -41,21 +40,8 @@ function handler<TBody> (controller: CustomController<TBody>): RequestHandler<an
           return
 
         case data instanceof TokenResultObject:
-          if (data.hasRefreshToken()) {
-            res.cookie(
-              // TODO: fix me
-              data.refreshTokenCookie?.name ?? '',
-              data.refreshTokenCookie?.value ?? '',
-              data.refreshTokenCookie?.options ?? {}
-            )
-          }
           res.status(status)
             .json({ results: data.toResult() })
-          return
-
-        case data instanceof ClearCookieResultObject:
-          res.clearCookie(data.name, data.options)
-            .sendStatus(status)
           return
 
         case data instanceof RedirectResultObject:

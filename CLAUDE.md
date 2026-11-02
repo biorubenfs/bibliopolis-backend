@@ -38,9 +38,9 @@ El desarrollo local necesita un **replica set** de MongoDB (se usan transaccione
 
 ## Arquitectura
 
-Flujo de una petición: `main.ts` → `App` (`app.ts`: conecta a Mongo, arranca `Server`, ejecuta `init()` de los DAO para índices/admin por defecto, arranca las tareas cron) → `Server` (`server.ts`: rate limit, CORS, cookies, routers, manejador de errores).
+Flujo de una petición: `main.ts` → `App` (`app.ts`: conecta a Mongo, arranca `Server`, ejecuta `init()` de los DAO para índices/admin por defecto, arranca las tareas cron) → `Server` (`server.ts`: rate limit, CORS, routers, manejador de errores).
 
-- `/auth` es público; el resto de routers pasan por `checkJwt` (`middlewares/jwt.middleware.ts`), que establece `req.userId` y `req.role` (tipados en `src/express.d.ts`). El access token es un JWT Bearer; el refresh token es una cookie httpOnly `refresh_token` guardada en la colección `refresh-tokens`.
+- `/auth` es público; el resto de routers pasan por `checkJwt` (`middlewares/jwt.middleware.ts`), que establece `req.userId` y `req.role` (tipados en `src/express.d.ts`). La autenticación usa un único JWT (sin refresh token): `POST /auth/login` lo devuelve en el body y el cliente lo envía en la cabecera `Authorization: Bearer`. Caducidad configurable con `JWT_EXPIRATION` (7d por defecto).
 
 Cada recurso en `src/resources/<nombre>/` sigue la misma estructura de capas:
 
@@ -74,7 +74,7 @@ Añadir un recurso nuevo: copiar las capas de `books/` o `libraries/`, registrar
 - IDs: paquete `ulid`, nunca `uuid` ni `ObjectId`.
 - No lanzar nunca un `Error` genérico desde el código de una petición: se convierte en un 500. Usar o crear una subclase de `ApiError` en `<recurso>.error.ts`.
 - El manejo de ISBN (dígito de control, conversión ISBN-10 ↔ 13) está en `src/utils/isbn.utils.ts`; reutilizarlo.
-- El logout solo revoca el refresh token; los access tokens (15 min por defecto) siguen siendo válidos hasta que caducan.
+- No hay logout en el servidor ni revocación de tokens: el cliente descarta el JWT y este sigue siendo válido hasta que caduca.
 - Las escrituras que afectan a más de una colección (p. ej. user-books + libraries) deben ir dentro de `runInTransaction`.
 
 ## Acuerdo de trabajo (para Claude)
