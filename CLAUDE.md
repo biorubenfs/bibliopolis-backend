@@ -92,4 +92,14 @@ Los tests de integración atacan el servidor HTTP real mediante `fetch` en el pu
 
 ## Despliegue
 
-La CI (`.github/workflows/ci.yml`) ejecuta build, lint, tests unitarios y de integración. La imagen Docker se publica en `ghcr.io/biorubenfs/bibliopolis`; `docker-compose.yml` (+ los overrides `.dev.yml` / `.prod.yml`) la ejecuta, y `update.sh` descarga la nueva imagen y reinicia en el VPS.
+- **CI** (`.github/workflows/ci.yml`): se ejecuta en cada push y en los PRs a `main`; hace build, lint, tests unitarios y de integración. No publica nada.
+- **Publicación de la imagen** (`.github/workflows/deploy.yml`): se lanza a mano (`workflow_dispatch`) y publica la imagen Docker en `ghcr.io/${{ github.repository }}`, es decir, el nombre de la imagen sale del nombre del repositorio (`biorubenfs/bibliopolis-backend`). Etiquetas: `latest` y `main-<sha>`.
+- **Ejecución en el VPS**: cada entorno tiene su carpeta con copias de `docker-compose.yml` (común: imagen `ghcr.io/biorubenfs/bibliopolis-backend:latest`, `.env`, límites, healthcheck) y de su override (`docker-compose.dev.yml` / `docker-compose.prod.yml`), que fija el nombre de proyecto (`name: bibliopolis-dev` / `bibliopolis-prod`), el nombre del contenedor y el puerto (3000 dev, 3001 prod). Se despliega con los alias del VPS:
+
+  ```bash
+  deploy-dev   # docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --pull always
+  deploy-prod  # docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --pull always
+  ```
+
+  Compose siempre debe lanzarse con los dos ficheros: con solo `docker-compose.yml` crea un contenedor extra (`backend-app-1`) sin puertos publicados. Para limpiar un contenedor sobrante usar `docker rm -f <nombre>`, no `docker compose down`.
+Como el nombre de la imagen depende del nombre del repositorio, si se renombra el repositorio hay que actualizar `image:` en `docker-compose.yml` (aquí y en la copia del VPS).
