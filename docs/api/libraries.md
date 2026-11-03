@@ -146,11 +146,11 @@ La biblioteca no existe.
 
 ## GET /libraries
 
-Lista las bibliotecas del usuario autenticado (o todas si es administrador). Admite [paginación](../index.md#paginacion) y búsqueda de texto.
+Lista las bibliotecas del usuario autenticado (o todas si es administrador), ordenadas por fecha de creación. Admite [paginación](../index.md#paginacion) y búsqueda de texto.
 
 ### Query Params
 
-- `search`: string (opcional) — Búsqueda de texto completo por palabras en el nombre y la descripción
+- `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre o descripción contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No distingue mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -188,7 +188,26 @@ Lista las bibliotecas del usuario autenticado (o todas si es administrador). Adm
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos.
+Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres.
+
+```json
+{
+  "statusCode": 400,
+  "errorCode": "VALIDATION ERROR",
+  "message": "invalid query params",
+  "validationError": [
+    {
+      "code": "too_big",
+      "maximum": 100,
+      "type": "string",
+      "inclusive": true,
+      "exact": false,
+      "message": "String must contain at most 100 character(s)",
+      "path": ["search"]
+    }
+  ]
+}
+```
 
 ---
 

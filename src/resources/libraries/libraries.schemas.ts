@@ -7,6 +7,10 @@ export const newLibrarySchema = z.object({
   description: z.string().trim().max(100)
 })
 
+export const librariesQuerySchema = z.object({
+  search: z.string().trim().max(100).optional()
+})
+
 export const addBookToLibrarySchema = z.object({
   title: z.string().trim(),
   isbn13: z.string().trim().transform((val) => val.replace(/[-\s]/g, '')).nullable(),
