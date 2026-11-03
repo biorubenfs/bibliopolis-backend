@@ -10,11 +10,17 @@ function dbLibraryToEntity (dbLibrary: DBLibrary | null): LibraryEntity | null {
   return dbLibrary == null ? null : new LibraryEntity(dbLibrary)
 }
 
+function escapeRegExp (value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 function listLibrariesMongoFilter (userId: string, role: Role, search?: string): Filter<DBLibrary> {
   const mongoFilter: Filter<DBLibrary> = role === Role.Regular ? { userId } : {}
 
-  if (search != null) {
-    mongoFilter.$text = { $search: search }
+  if (search != null && search !== '') {
+    // Case-insensitive substring match: user input is escaped so it is matched literally
+    const pattern = { $regex: escapeRegExp(search), $options: 'i' }
+    mongoFilter.$or = [{ name: pattern }, { description: pattern }]
   }
 
   return mongoFilter
@@ -26,7 +32,7 @@ class LibrariesDao extends Dao<DBLibrary> {
   }
 
   async init (): Promise<void> {
-    await this.collection.createIndex({ name: 'text', description: 'text' })
+    await this.collection.createIndex({ userId: 1 })
   }
 
   async create (newLibrary: NewLibrary, userId: string): Promise<LibraryEntity> {
@@ -78,6 +84,7 @@ class LibrariesDao extends Dao<DBLibrary> {
   async list (userId: string, role: Role, skip: number, limit: number, search?: string): Promise<readonly LibraryEntity[]> {
     const mongoFilter = listLibrariesMongoFilter(userId, role, search)
     const dbLibraries = await this.collection.find(mongoFilter)
+      .sort({ _id: 1 })
       .skip(skip)
       .limit(limit)
       .toArray()

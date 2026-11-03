@@ -2,12 +2,13 @@ import { Router } from 'express'
 import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
 
-import { addBookToLibrarySchema, newLibrarySchema } from './libraries.schemas.js'
+import { addBookToLibrarySchema, librariesQuerySchema, newLibrarySchema } from './libraries.schemas.js'
 import librariesService from './libraries.service.js'
 import { Role } from '../users/users.interfaces.js'
 import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
 import { parseSkipLimitQP } from '../../utils.js'
 import { HttpStatusCode } from '../../types.js'
+import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 
 const librariesRouter = Router()
 
@@ -21,9 +22,10 @@ librariesRouter.get('/:id', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-librariesRouter.get('/', queryPaginationValidator, handler(async (req) => {
-  const search = req.query.search
-  const result = await librariesService.list(req.userId ?? '', req.role ?? Role.Regular, parseSkipLimitQP(req), search as string)
+librariesRouter.get('/', queryParamsValidator(librariesQuerySchema), queryPaginationValidator, handler(async (req) => {
+  // already validated by queryParamsValidator, parsed again to apply the trim
+  const { search } = librariesQuerySchema.parse(req.query)
+  const result = await librariesService.list(req.userId ?? '', req.role ?? Role.Regular, parseSkipLimitQP(req), search)
   return { status: HttpStatusCode.OK, data: result }
 }))
 

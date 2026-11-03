@@ -70,6 +70,88 @@ describe('libraries CRUD basic tests', async () => {
     expect(body.results.length).equals(1)
   })
 
+  async function listLibraries (query: Record<string, string | string[]>): Promise<{ status: number, body: any }> {
+    const url = new URL('/libraries', testUtils.TESTS_BASE_URL)
+    for (const [key, value] of Object.entries(query)) {
+      for (const item of Array.isArray(value) ? value : [value]) {
+        url.searchParams.append(key, item)
+      }
+    }
+    const response = await fetch(url.href, {
+      headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+      method: 'GET'
+    })
+    return { status: response.status, body: await response.json() }
+  }
+
+  it('GET /libraries?search - should match partial words in the name', async () => {
+    const { status, body } = await listLibraries({ search: 'seco' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(1)
+    expect(body.results[0].attributes.name).equals('sample second library')
+  })
+
+  it('GET /libraries?search - should be case insensitive', async () => {
+    const { status, body } = await listLibraries({ search: 'THIRD' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(1)
+    expect(body.results[0].attributes.name).equals('sample third library')
+  })
+
+  it('GET /libraries?search - should match the description', async () => {
+    const { status, body } = await listLibraries({ search: 'description of the sample first' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(1)
+    expect(body.results[0].attributes.name).equals('sample first library')
+  })
+
+  it('GET /libraries?search - should only return libraries of the user', async () => {
+    const { status, body } = await listLibraries({ search: 'user02' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(0)
+  })
+
+  it('GET /libraries?search - should match regex special characters literally', async () => {
+    const { status, body } = await listLibraries({ search: '.*' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(0)
+    expect(body.paginationInfo.total).equals(0)
+  })
+
+  it('GET /libraries?search - should ignore a blank search', async () => {
+    const { status, body } = await listLibraries({ search: '   ' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(3)
+  })
+
+  it('GET /libraries?search - should apply the search to the pagination total', async () => {
+    const { status, body } = await listLibraries({ search: 'library', limit: '2' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(2)
+    expect(body.paginationInfo.total).equals(3)
+  })
+
+  it('GET /libraries?search - should fail with more than one search param', async () => {
+    const { status, body } = await listLibraries({ search: ['first', 'second'] })
+
+    expect(status).equals(400)
+    expect(body.errorCode).equals(ApiRestErrorCode.ValidationError)
+  })
+
+  it('GET /libraries?search - should fail with a search longer than 100 characters', async () => {
+    const { status, body } = await listLibraries({ search: 'a'.repeat(101) })
+
+    expect(status).equals(400)
+    expect(body.errorCode).equals(ApiRestErrorCode.ValidationError)
+  })
+
   it('POST /libraries - should create a library', async () => {
     const body = { name: 'new library', description: 'description of the new library' }
     const response = await fetch(librariesUrl, {
