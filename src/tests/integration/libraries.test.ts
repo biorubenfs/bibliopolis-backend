@@ -488,6 +488,28 @@ describe('user-books tests', async () => {
       .that.includes(libraryId)
   })
 
+  it('GET /user-books - should sort the books from newest to oldest id regardless of the insertion order', async () => {
+    const earlierId = '01J9W9P6M5S0VRKVSRX3Q9T3W0'
+    const userBook = await userBooksDao.collection.findOne({ _id: '01J9W9P6M5S0VRKVSRX3Q9T3W7' })
+    if (userBook == null) throw new Error('fixture not found')
+    await userBooksDao.collection.insertOne({ ...userBook, _id: earlierId })
+
+    try {
+      const response = await fetch(userBooksUrl, {
+        headers: { Authorization: authHeader },
+        method: 'GET'
+      })
+      const responseBody = await response.json()
+
+      expect(response.status).equals(200)
+      const ids: string[] = responseBody.results.map((userBook: { id: string }) => userBook.id)
+      expect(ids[ids.length - 1]).equals(earlierId)
+      expect(ids).toEqual([...ids].sort().reverse())
+    } finally {
+      await userBooksDao.collection.deleteOne({ _id: earlierId })
+    }
+  })
+
   it('GET /user-books?libraryId= - should fail to list books of a not owned library', async () => {
     const libraryId = '01J9XDD1NAFHP0159FYT245D8X'
     const url = new URL('/user-books', userBooksUrl)
