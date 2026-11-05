@@ -32,7 +32,7 @@ Crea un nuevo usuario con rol `regular`. **Solo administradores.**
 | ---------- | ------ | --------- | -------------------------------------------- |
 | `name`     | string | Sí        | Nombre del usuario                           |
 | `email`    | string | Sí        | Email del usuario. Debe ser un email válido  |
-| `password` | string | Sí        | Contraseña del usuario                       |
+| `password` | string | Sí        | Contraseña del usuario (entre 6 y 20 caracteres) |
 
 ### Respuestas
 
@@ -57,7 +57,7 @@ Crea un nuevo usuario con rol `regular`. **Solo administradores.**
 
 #### 400 Bad Request
 
-Body no válido (email con formato incorrecto, campos faltantes, …).
+Body no válido (email con formato incorrecto, contraseña fuera de los límites, campos faltantes, …).
 
 #### 401 Unauthorized
 
@@ -152,7 +152,7 @@ Mismo formato que [`GET /auth/me`](auth.md#get-authme).
 
 ## PATCH /users/me
 
-Actualiza el nombre del usuario autenticado. El avatar se regenera a partir del nuevo nombre.
+Actualiza el nombre del usuario autenticado. El avatar se regenera a partir del nuevo nombre; si RoboHash falla, el nombre se actualiza igualmente y el avatar queda como una cadena vacía.
 
 ### Body
 
@@ -198,7 +198,7 @@ Cambia la contraseña del usuario autenticado.
 | Campo             | Tipo   | Requerido | Descripción                         |
 | ----------------- | ------ | --------- | ----------------------------------- |
 | `currentPassword` | string | Sí        | Contraseña actual (máx. 20 caracteres) |
-| `newPassword`     | string | Sí        | Nueva contraseña (máx. 20 caracteres)  |
+| `newPassword`     | string | Sí        | Nueva contraseña (entre 6 y 20 caracteres) |
 
 ### Respuestas
 
