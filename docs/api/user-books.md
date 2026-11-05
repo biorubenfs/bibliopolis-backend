@@ -26,6 +26,8 @@ Lista los user books. Admite [paginación](../index.md#paginacion), filtros por 
 - Un usuario normal solo puede listar sus propios user books de sus bibliotecas. Si no indica `libraryId`, se listan los de todas sus bibliotecas.
 - Un administrador puede listar los de cualquier usuario y biblioteca.
 
+Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo. Con `search` se ordenan por relevancia.
+
 ### Query Params
 
 - `libraryId`: string (opcional, se puede repetir) — Acota la búsqueda a una o varias bibliotecas (`?libraryId=A&libraryId=B`)

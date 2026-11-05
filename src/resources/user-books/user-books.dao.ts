@@ -134,6 +134,12 @@ class UserBooksDao extends Dao<DBUserBook> {
   async list (filters: { librariesIds?: readonly string[], userId?: string, search?: string }, skip: number, limit: number): Promise<readonly UserBookEntity[]> {
     const pipeline = buildSearchAggregationPipeline(filters)
 
+    // Newest first: ULIDs sort by creation time. Without a sort the pages may overlap.
+    // Search results keep their relevance order
+    if (filters.search == null) {
+      pipeline.push({ $sort: { _id: -1 } })
+    }
+
     pipeline.push({ $skip: skip })
     pipeline.push({ $limit: limit })
 
