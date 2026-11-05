@@ -1,5 +1,8 @@
-import { afterAll, beforeAll, describe, it, expect } from 'vitest'
+import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest'
 import usersDao from '../../resources/users/users.dao.js'
+import usersService from '../../resources/users/users.service.js'
+import robohashApi from '../../resources/users/robohash/robohash.api.js'
+import { ApiRestErrorCode } from '../../error/types.js'
 import config from '../../config.js'
 import { Role } from '../../resources/users/users.interfaces.js'
 import { makeJwt } from '../../resources/auth/auth.utils.js'
@@ -74,6 +77,22 @@ describe('users tests', async () => {
     expect(response.status).equals(400)
   })
 
+  it.each([
+    ['too short', 'a'.repeat(5)],
+    ['too long', 'a'.repeat(21)]
+  ])('POST /users - should reject a password that is %s', async (_, password) => {
+    const response = await fetch(usersURL, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: adminAuthHeader
+      },
+      method: 'POST',
+      body: JSON.stringify({ name: 'foo', email: 'foo@email.com', password })
+    })
+
+    expect(response.status).equals(400)
+  })
+
   it('POST /users - should deny to create a new user', async () => {
     const body = {
       name: 'user01',
@@ -143,6 +162,38 @@ describe('users tests', async () => {
     })
 
     expect(response.status).equals(400)
+  })
+
+  it.each([
+    ['too short', 'a'.repeat(5)],
+    ['too long', 'a'.repeat(21)]
+  ])('PATCH /users/me/password - should reject a new password that is %s', async (_, newPassword) => {
+    const response = await fetch(new URL('/users/me/password', usersURL), {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader
+      },
+      method: 'PATCH',
+      body: JSON.stringify({ currentPassword: 'Password123$', newPassword })
+    })
+
+    expect(response.status).equals(400)
+    expect(await response.json()).to.have.property('errorCode').not.equals(ApiRestErrorCode.InvalidPassword)
+  })
+
+  it('updateUser should save the name with the default avatar when RoboHash fails', async () => {
+    // The HTTP server runs in another process, so the failure can only be simulated on the service
+    const getImage = vi.spyOn(robohashApi, 'getImage').mockRejectedValue(new Error('RoboHash is down'))
+
+    try {
+      await usersService.updateUser('01J9BHWZ8N4B1JBSAFCBKQGERS', { name: 'no-robohash' })
+    } finally {
+      getImage.mockRestore()
+    }
+
+    const user = await usersDao.findById('01J9BHWZ8N4B1JBSAFCBKQGERS')
+    expect(user?.name).equals('no-robohash')
+    expect(user?.avatar).equals('')
   })
 
   it('PATCH /users/me should update a user', async () => {

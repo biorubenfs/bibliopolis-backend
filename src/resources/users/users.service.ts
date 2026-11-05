@@ -28,24 +28,11 @@ class UsersService {
     const validationCode = crypto.randomInt(VALIDATION_CODE_LIMIT).toString()
 
     // TODO: Decouple user creation from avatar creation. Create user with default or null avatar and update it asynchronously after fetching from RoboHash.
-    let avatarBase64: string
-
-    try {
-      const avatar = await robohashApi.getImage(body.name)
-      avatarBase64 = transformImageToBase64(avatar)
-    } catch (error) {
-      // loguea el error para observabilidad
-      logger.error('Error fetching avatar from RoboHash:', error)
-
-      // fallback
-      avatarBase64 = DEFAULT_AVATAR_BASE64
-    }
-
     const userData: CreateUser = {
       ...body,
       password: hashPasswordSync(body.password),
       validationCode,
-      avatar: avatarBase64
+      avatar: await this.generateAvatar(body.name)
     }
 
     const newUser = await usersDao.create(userData, Role.Regular)
@@ -100,10 +87,9 @@ class UsersService {
   }
 
   async updateUser (userId: string, data: Omit<UpdateUser, 'avatar'>): Promise<SingleResultObject<UserEntity>> {
-    const recalculatedAvatar = await robohashApi.getImage(data.name)
     const updData: UpdateUser = {
       ...data,
-      avatar: transformImageToBase64(recalculatedAvatar)
+      avatar: await this.generateAvatar(data.name)
     }
     const updUser = await usersDao.updateUser(userId, updData)
     if (updUser == null) {
@@ -115,6 +101,17 @@ class UsersService {
 
   async validate (id: string, validationCode: string): Promise<void> {
     await usersDao.validate(id, validationCode)
+  }
+
+  /** A RoboHash failure must not block the operation: it falls back to the default avatar. */
+  private async generateAvatar (name: string): Promise<string> {
+    try {
+      const avatar = await robohashApi.getImage(name)
+      return transformImageToBase64(avatar)
+    } catch (error) {
+      logger.error('Error fetching avatar from RoboHash:', error)
+      return DEFAULT_AVATAR_BASE64
+    }
   }
 }
 
