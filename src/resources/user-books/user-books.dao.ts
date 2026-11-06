@@ -92,7 +92,7 @@ class UserBooksDao extends Dao<DBUserBook> {
     super('user_books')
   }
 
-  async init(): Promise<void> {
+  async init (): Promise<void> {
     await this.collection.createIndex({ userId: 1, bookId: 1 }, { unique: true })
     await this.collection.createIndex({ libraries: 1 })
   }
