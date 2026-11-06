@@ -32,6 +32,12 @@ export class BooksApiError extends ApiError {
   }
 }
 
+export class SourcesUnavailableError extends ApiError {
+  constructor (message: string) {
+    super(ApiRestErrorCode.SourcesUnavailable, 503, message)
+  }
+}
+
 export class TooManyRequestsError extends ApiError {
   constructor (message: string) {
     super(ApiRestErrorCode.TooManyRequests, 429, message)

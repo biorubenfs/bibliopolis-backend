@@ -1,6 +1,7 @@
 import config from '../../../config.js'
-import { BooksApiError } from '../../../error/errors.js'
+import { SourcesUnavailableError } from '../../../error/errors.js'
 import logger from '../../../logger.js'
+import { SOURCE_REQUEST_TIMEOUT_MS } from '../sources.constants.js'
 import { OpenLibraryAuthor, OpenLibraryBook, OpenLibraryWork } from './open-library.types.js'
 
 class OpenLibraryApi {
@@ -11,29 +12,25 @@ class OpenLibraryApi {
   }
 
   private async fetchJson<T> (url: URL): Promise<T | null> {
-    const response = await fetch(url)
+    const response = await fetch(url, { signal: AbortSignal.timeout(SOURCE_REQUEST_TIMEOUT_MS) })
 
     if (response.status === 404) {
       return null
     }
 
     if (!response.ok) {
-      throw new BooksApiError(`HTTP error ${response.status}: ${response.statusText}`)
+      throw new SourcesUnavailableError(`HTTP error ${response.status}: ${response.statusText}`)
     }
 
     return await response.json() as T
   }
 
+  // Resolves to null only when the source answers that it does not have the book; any failure rejects
   async fetchBookByIsbn (isbn: string): Promise<OpenLibraryBook | null> {
-    try {
-      const url = new URL(`/isbn/${isbn}.json`, this.domain)
-      const book = await this.fetchJson<OpenLibraryBook>(url)
-      if (book == null) logger.warn(`Book not found in Open Library API: ${isbn}`)
-      return book
-    } catch (error) {
-      logger.error(`Error fetching book from Open Library API: ${isbn}`, { error })
-      return null
-    }
+    const url = new URL(`/isbn/${isbn}.json`, this.domain)
+    const book = await this.fetchJson<OpenLibraryBook>(url)
+    if (book == null) logger.warn(`Book not found in Open Library API: ${isbn}`)
+    return book
   }
 
   async fetchWorkById (workKey: string): Promise<OpenLibraryWork | null> {

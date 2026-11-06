@@ -74,3 +74,15 @@ El libro no está en el catálogo ni en ninguna fuente externa.
   "message": "Book not found in any source"
 }
 ```
+
+#### 503 Service Unavailable
+
+El libro no se ha encontrado y al menos una fuente externa ha fallado: error de red, tiempo de espera agotado (10 s) o una respuesta que no es correcta, como un 429. No significa que el libro no exista, así que se puede reintentar más tarde. Si una fuente falla y la otra encuentra el libro, la respuesta es un `200`, con los datos de esa fuente.
+
+```json
+{
+  "statusCode": 503,
+  "errorCode": "SOURCES UNAVAILABLE ERROR",
+  "message": "Book sources are currently unavailable"
+}
+```
