@@ -29,7 +29,7 @@ class BooksService {
       authors: body.authors,
       isbn13,
       isbn10,
-      cover: body.cover ?? null
+      cover: body.cover
     }
 
     const newBook = await booksDao.create(bookData)

@@ -10,6 +10,8 @@ function bodyValidator<TSchema extends ZodSchema> (schema: TSchema): RequestHand
     if (!validationResult.success) {
       throw new InvalidBodyError('invalid body', validationResult.error.issues)
     }
+
+    req.body = validationResult.data
     next()
   }
 }
