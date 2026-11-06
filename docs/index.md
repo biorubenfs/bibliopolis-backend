@@ -73,6 +73,10 @@ Colección (con información de paginación):
 
 Los identificadores son [ULIDs](https://github.com/ulid/spec) y las fechas se devuelven en formato ISO 8601.
 
+## Validación del body
+
+El body de las peticiones se valida antes de procesarlas. Los campos que no estén documentados para un endpoint se ignoran y no se guardan, y a los campos opcionales que se omitan se les aplica su valor por defecto.
+
 ## Paginación
 
 Los endpoints que devuelven colecciones aceptan los query params:
