@@ -15,7 +15,9 @@ class BooksDao extends Dao<DBBook> {
 
   async init (): Promise<void> {
     await this.collection.createIndex({ isbn13: 1 }, { unique: true })
-    await this.collection.createIndex({ isbn10: 1 }, { unique: true, partialFilterExpression: { isbn10: { $type: 'string' } } })
+    // $gt instead of $type: the query planner only uses a partial index if the query implies its filter,
+    // and it does not infer that from an equality on a string
+    await this.collection.createIndex({ isbn10: 1 }, { unique: true, partialFilterExpression: { isbn10: { $gt: '' } } })
   }
 
   async create (newBook: NewBookDao): Promise<BookEntity> {
@@ -42,18 +44,6 @@ class BooksDao extends Dao<DBBook> {
 
   async findById (id: string): Promise<BookEntity | null> {
     const dbBook = await this.collection.findOne({ _id: id })
-
-    return dbBookToEntity(dbBook)
-  }
-
-  async findByIsbn13 (isbn: string): Promise<BookEntity | null> {
-    const dbBook = await this.collection.findOne({ isbn13: isbn })
-
-    return dbBookToEntity(dbBook)
-  }
-
-  async findByIsbn10 (isbn: string): Promise<BookEntity | null> {
-    const dbBook = await this.collection.findOne({ isbn10: isbn })
 
     return dbBookToEntity(dbBook)
   }
