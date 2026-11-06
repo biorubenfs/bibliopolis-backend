@@ -124,3 +124,4 @@ Todos los errores tienen el mismo formato:
 | 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca, …)       |
 | 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos                             |
 | 500    | `INTERNAL SERVER ERROR`     | Error inesperado del servidor                                     |
+| 503    | `SOURCES UNAVAILABLE ERROR` | Libro no encontrado y al menos una fuente externa ha fallado      |

@@ -2,7 +2,8 @@ import { Request } from 'express'
 import { Page } from './types.js'
 import config from './config.js'
 import { BooksSource } from './resources/sources/sources.types.js'
-import { BooksApiError } from './error/errors.js'
+import { BooksApiError, SourcesUnavailableError } from './error/errors.js'
+import logger from './logger.js'
 import googleBooksApi from './resources/sources/google-books/google-books.api.js'
 import openLibraryApi from './resources/sources/open-library/open-library.api.js'
 import { NewBook } from './resources/books/books.interfaces.js'
@@ -85,6 +86,13 @@ export async function getBookFromSourcesApis (isbn: string): Promise<NewBook> {
     openLibraryApi.fetchBookByIsbn(isbn)
   ])
 
+  if (googleBooksResult.status === 'rejected') {
+    logger.error(`Error fetching book from Google Books API: ${isbn}`, { error: googleBooksResult.reason })
+  }
+  if (openLibraryResult.status === 'rejected') {
+    logger.error(`Error fetching book from Open Library API: ${isbn}`, { error: openLibraryResult.reason })
+  }
+
   const googleBooksVolume = googleBooksResult.status === 'fulfilled' ? googleBooksResult.value : null
   const openLibraryBook = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null
 
@@ -128,7 +136,11 @@ export async function getBookFromSourcesApis (isbn: string): Promise<NewBook> {
   const sourceIsbn = bookData.isbn13 ?? bookData.isbn10
 
   if (bookData.title == null || bookData.title === '' || sourceIsbn == null) {
-    // TODO: Add tests for this case
+    // A source that failed might have the book, so we cannot claim that it does not exist
+    if (googleBooksResult.status === 'rejected' || openLibraryResult.status === 'rejected') {
+      throw new SourcesUnavailableError('Book sources are currently unavailable')
+    }
+
     throw new BooksApiError('Book not found in any source')
   }
 

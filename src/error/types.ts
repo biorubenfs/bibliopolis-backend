@@ -9,5 +9,6 @@ export enum ApiRestErrorCode {
   PermissionError = 'PERMISSION ERROR',
   InvalidPassword = 'INVALID PASSWORD',
   ApiBooksError = 'BOOKS API ERROR',
+  SourcesUnavailable = 'SOURCES UNAVAILABLE ERROR',
   TooManyRequests = 'TOO MANY REQUESTS ERROR'
 }
