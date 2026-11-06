@@ -45,8 +45,9 @@ async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promis
       try {
         const bookData = await getBookFromSourcesApis(isbn)
 
-        const hasNewAuthors = bookData.authors.length > 0
-        const hasNewCover = bookData.cover.value != null
+        // Only fill what the book is missing: existing data may be handwritten or come from a source that failed today
+        const hasNewAuthors = book.authors.length === 0 && bookData.authors.length > 0
+        const hasNewCover = book.cover.value == null && bookData.cover.value != null
 
         if (!hasNewAuthors && !hasNewCover) {
           logger.warn(`[ UPDATE BOOKS TASK ] book skipped: sources returned no useful data, bookId: ${book._id}, isbn: ${isbn}`)
@@ -54,12 +55,15 @@ async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promis
           continue
         }
 
+        const authors = hasNewAuthors ? bookData.authors : book.authors
+        const cover = hasNewCover ? bookData.cover : book.cover
+
         await booksDao.collection.updateOne(
           { _id: book._id },
           {
             $set: {
-              authors: bookData.authors,
-              cover: bookData.cover,
+              authors,
+              cover,
               updatedAt: new Date()
             }
           }
@@ -69,8 +73,8 @@ async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promis
 
         updatedBooks.push({
           bookId: book._id,
-          authors: bookData.authors,
-          cover: bookData.cover
+          authors,
+          cover
         })
       } catch (err) {
         if (err instanceof BooksApiError) {
