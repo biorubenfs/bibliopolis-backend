@@ -12,7 +12,7 @@ import { Role } from '../users/users.interfaces.js'
 import librariesDao from './libraries.dao.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { BookAlreadyExistingInLibrary, BookNotFoundInLibraryError, LibraryNameConflictError, LibraryNotFoundError, LibraryPermissionsError } from './libraries.error.js'
-import { NewLibrary } from './libraries.interfaces.js'
+import { LibrariesListFilter, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 
 class LibrariesService {
   private async checkLibraryNameAvailable (libraryName: string, userId: string, excludeLibraryId?: string): Promise<void> {
@@ -33,7 +33,7 @@ class LibrariesService {
     return new SingleResultObject(newLibrary)
   }
 
-  async update (id: string, body: Partial<NewLibrary>, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
+  async update (id: string, body: UpdateLibrary, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
     const library = await this.get(id, userId, role)
     if (body.name != null) {
       await this.checkLibraryNameAvailable(body.name, userId, id)
@@ -78,10 +78,10 @@ class LibrariesService {
     })
   }
 
-  async list (userId: string, role: Role, page: Page, search?: string): Promise<CollectionResultObject<LibraryEntity>> {
+  async list (userId: string, role: Role, page: Page, filter: LibrariesListFilter = {}): Promise<CollectionResultObject<LibraryEntity>> {
     const [libraries, total] = await Promise.all([
-      await librariesDao.list(userId, role, page.skip, page.limit, search),
-      await librariesDao.count(userId, role, search)
+      await librariesDao.list(userId, role, page.skip, page.limit, filter),
+      await librariesDao.count(userId, role, filter)
     ])
 
     const mockPaginationObject = { ...page, total }

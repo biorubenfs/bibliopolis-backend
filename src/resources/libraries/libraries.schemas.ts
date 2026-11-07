@@ -7,8 +7,15 @@ export const newLibrarySchema = z.object({
   description: z.string().trim().max(100)
 })
 
+// isFavorite is only changed through PATCH: a new library is never a favorite
+export const updateLibrarySchema = newLibrarySchema.partial().extend({
+  isFavorite: z.boolean().optional()
+})
+
 export const librariesQuerySchema = z.object({
-  search: z.string().trim().max(100).optional()
+  search: z.string().trim().max(100).optional(),
+  // Only "true" is accepted: "false" would be ambiguous (non-favorites or no filter)
+  favorites: z.literal('true').transform(() => true).optional()
 })
 
 export const addBookToLibrarySchema = z.object({

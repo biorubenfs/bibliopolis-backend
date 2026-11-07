@@ -10,6 +10,7 @@ Atributos de una biblioteca:
 | `description` | string   | Descripción de la biblioteca                   |
 | `userId`      | string   | ID del usuario propietario                     |
 | `books`       | string[] | IDs de los user books que contiene             |
+| `isFavorite`  | boolean  | Si el usuario la ha marcado como favorita      |
 | `createdAt`   | date     | Fecha de creación                              |
 | `updatedAt`   | date     | Fecha de la última modificación                |
 
@@ -33,6 +34,8 @@ Crea una nueva biblioteca para el usuario autenticado.
 
 Se eliminan los espacios al principio y al final de ambos campos.
 
+Una biblioteca nueva nunca es favorita: `isFavorite` se ignora si se envía y solo se cambia con [`PATCH /libraries/:id`](#patch-librariesid).
+
 ### Respuestas
 
 #### 201 Created
@@ -49,6 +52,7 @@ Biblioteca creada correctamente.
       "description": "description of the sample first library",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": [],
+      "isFavorite": false,
       "createdAt": "2024-10-10T22:30:16.908Z",
       "updatedAt": "2024-10-10T22:30:16.908Z"
     }
@@ -111,6 +115,7 @@ Obtiene una biblioteca. Solo el propietario o un administrador pueden consultarl
         "01J9W9PGE06ANTMG3Y24KGCAFF",
         "01J9WA3W9TE5NG1H21PTK9VS4Q"
       ],
+      "isFavorite": false,
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -146,11 +151,12 @@ La biblioteca no existe.
 
 ## GET /libraries
 
-Lista las bibliotecas del usuario autenticado (o todas si es administrador), ordenadas por fecha de creación. Admite [paginación](../index.md#paginacion) y búsqueda de texto.
+Lista las bibliotecas del usuario autenticado (o todas si es administrador): primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtro de favoritas.
 
 ### Query Params
 
 - `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre o descripción contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No distingue mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
+- `favorites`: `true` (opcional) — Devuelve solo las favoritas. No admite otro valor: para no filtrar, se omite. Se combina con `search`, y el `total` de `paginationInfo` cuenta solo las que coinciden
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -173,6 +179,7 @@ Lista las bibliotecas del usuario autenticado (o todas si es administrador), ord
           "01J9W9PGE06ANTMG3Y24KGCAFF",
           "01J9WA3W9TE5NG1H21PTK9VS4Q"
         ],
+        "isFavorite": false,
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
       }
@@ -188,7 +195,7 @@ Lista las bibliotecas del usuario autenticado (o todas si es administrador), ord
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres.
+Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres, o `favorites` con un valor distinto de `true`.
 
 ```json
 {
@@ -213,7 +220,7 @@ Parámetros de paginación no válidos, `search` repetido o con más de 100 cara
 
 ## PATCH /libraries/:id
 
-Modifica el nombre y/o la descripción de una biblioteca. Solo el propietario o un administrador pueden modificarla.
+Modifica el nombre, la descripción o la marca de favorita de una biblioteca. Solo el propietario o un administrador pueden modificarla.
 
 ### Body
 
@@ -222,14 +229,16 @@ Todos los campos son opcionales; solo se modifican los que se envían.
 ```json
 {
   "name": "Nuevo nombre",
-  "description": "Nueva descripción"
+  "description": "Nueva descripción",
+  "isFavorite": true
 }
 ```
 
-| Campo         | Tipo   | Requerido | Descripción                                        |
-| ------------- | ------ | --------- | -------------------------------------------------- |
-| `name`        | string | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
-| `description` | string | No        | Descripción de la biblioteca (máx. 100 caracteres) |
+| Campo         | Tipo    | Requerido | Descripción                                        |
+| ------------- | ------- | --------- | -------------------------------------------------- |
+| `name`        | string  | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
+| `description` | string  | No        | Descripción de la biblioteca (máx. 100 caracteres) |
+| `isFavorite`  | boolean | No        | Marca (`true`) o desmarca (`false`) la biblioteca como favorita |
 
 ### Respuestas
 
@@ -331,6 +340,7 @@ Devuelve la biblioteca actualizada, con el ID del user book añadido a `books`.
       "description": "description of the sample first library",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": ["01J9W9P6M5S0VRKVSRX3Q9T3W7"],
+      "isFavorite": false,
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
