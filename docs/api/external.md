@@ -6,6 +6,15 @@ Busca los datos de un libro por ISBN. Primero se busca en el catálogo de Biblio
 
 Es útil para obtener los datos de un libro antes de añadirlo a una biblioteca con [`POST /libraries/:id/books`](libraries.md#post-librariesidbooks).
 
+### Limitación conocida: datos de otra edición
+
+Cuando el libro procede de las fuentes externas, `isbn13` e `isbn10` siempre corresponden al ISBN pedido, pero `title`, `authors` y `cover` pueden ser de otra edición o incluso de otro libro. Por ejemplo:
+
+- Google Books no siempre devuelve primero el volumen con el ISBN pedido, y se usa el primero que devuelve. Para `9780297166047` da primero otra edición de *The Age of Revolution*; para `9780130384744` solo devuelve la edición `9789702602545`.
+- Elegir el volumen con el ISBN exacto tampoco garantiza acertar: para `9780070004221`, Google Books lo asocia a *TI Logo*, mientras que Open Library lo asocia a *Structure and Interpretation of Computer Programs*.
+
+Con estas fuentes no hay una regla fiable para detectarlo, así que de momento no se intenta corregir.
+
 ### Query Params
 
 - `isbn`: string — ISBN-13 o ISBN-10 a buscar. Se eliminan guiones y espacios.
@@ -22,7 +31,7 @@ Las portadas de Open Library se devuelven en tamaño grande (`L`).
     "type": "book-result",
     "attributes": {
       "title": "The Seven Habits of Highly Effective People",
-      "isbn13": null,
+      "isbn13": "9780671708634",
       "isbn10": "0671708635",
       "authors": ["Stephen R. Covey", "Sean Covey"],
       "cover": {
@@ -38,8 +47,8 @@ Las portadas de Open Library se devuelven en tamaño grande (`L`).
 | Campo      | Tipo        | Descripción                                                                                 |
 | ---------- | ----------- | ------------------------------------------------------------------------------------------- |
 | `title`    | string      | Título                                                                                      |
-| `isbn13`   | string/null | ISBN-13                                                                                     |
-| `isbn10`   | string/null | ISBN-10                                                                                     |
+| `isbn13`   | string      | ISBN-13                                                                                     |
+| `isbn10`   | string/null | ISBN-10, o `null` si el ISBN-13 no tiene equivalente (prefijo distinto de 978)              |
 | `authors`  | string[]    | Autores                                                                                     |
 | `cover`    | object      | Solo cuando el libro procede de fuentes externas: `{ source, value }` de la portada, en el formato que acepta `POST /libraries/:id/books` |
 | `coverUrl` | string/null | URL de la portada                                                                           |

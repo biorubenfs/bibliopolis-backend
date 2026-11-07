@@ -106,6 +106,94 @@ describe('getBookFromSourcesApis', () => {
     expect(book.title).toBe('Open Library title')
     expect(book.authors).toEqual([])
   })
+
+  describe('should keep the requested isbn when the sources answer with another one', () => {
+    const REQUESTED_ISBN13 = '9780297166047'
+    const REQUESTED_ISBN10 = '0297166042'
+
+    const volume = (title: string, industryIdentifiers: ReadonlyArray<{ type: string, identifier: string }>): unknown => ({
+      id: `${title}-id`,
+      volumeInfo: { title, industryIdentifiers }
+    })
+    const otherEditionIdentifiers = [
+      { type: 'ISBN_10', identifier: '0349116903' },
+      { type: 'ISBN_13', identifier: '9780349116907' }
+    ]
+    const requestedIdentifiers = [
+      { type: 'ISBN_10', identifier: REQUESTED_ISBN10 },
+      { type: 'ISBN_13', identifier: REQUESTED_ISBN13 }
+    ]
+
+    it('when the first Google Books volume is another edition and the requested one comes later', async () => {
+      stubSources(json({
+        items: [volume('Other edition', otherEditionIdentifiers), volume('Requested edition', requestedIdentifiers)]
+      }), notFound)
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN13)
+
+      expect(book.isbn13).toBe(REQUESTED_ISBN13)
+      expect(book.isbn10).toBe(REQUESTED_ISBN10)
+    })
+
+    it('when the only Google Books volume is another edition', async () => {
+      stubSources(json({ items: [volume('Other edition', otherEditionIdentifiers)] }), notFound)
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN13)
+
+      expect(book.isbn13).toBe(REQUESTED_ISBN13)
+      expect(book.isbn10).toBe(REQUESTED_ISBN10)
+    })
+
+    it('when the first Google Books volume has no isbn and Open Library lists several', async () => {
+      stubSources(
+        json({ items: [volume('Volume without isbn', [{ type: 'OTHER', identifier: 'UOM:39015010875964' }])] }),
+        json({ title: 'Open Library title', isbn_10: ['0349116903', REQUESTED_ISBN10] })
+      )
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN13)
+
+      expect(book.isbn13).toBe(REQUESTED_ISBN13)
+      expect(book.isbn10).toBe(REQUESTED_ISBN10)
+    })
+
+    it('when only Open Library has the book and it lists several', async () => {
+      stubSources(googleNotFound, json({ title: 'Open Library title', isbn_10: ['0349116903', REQUESTED_ISBN10] }))
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN13)
+
+      expect(book.isbn13).toBe(REQUESTED_ISBN13)
+      expect(book.isbn10).toBe(REQUESTED_ISBN10)
+    })
+
+    it('when the book is requested by its isbn10', async () => {
+      stubSources(json({ items: [volume('Other edition', otherEditionIdentifiers)] }), notFound)
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN10)
+
+      expect(book.isbn13).toBe(REQUESTED_ISBN13)
+      expect(book.isbn10).toBe(REQUESTED_ISBN10)
+    })
+
+    it('without an isbn10 when the requested isbn13 has no equivalent', async () => {
+      stubSources(json({ items: [volume('Other edition', otherEditionIdentifiers)] }), notFound)
+
+      const book = await getBookFromSourcesApis('9791034902305')
+
+      expect(book.isbn13).toBe('9791034902305')
+      expect(book.isbn10).toBeNull()
+    })
+
+    // Known limitation: there is no reliable way to tell which volume is right, see docs/api/external.md
+    it('while the rest of the data still comes from the first volume', async () => {
+      stubSources(json({
+        items: [volume('Other edition', otherEditionIdentifiers), volume('Requested edition', requestedIdentifiers)]
+      }), notFound)
+
+      const book = await getBookFromSourcesApis(REQUESTED_ISBN13)
+
+      expect(book.title).toBe('Other edition')
+    })
+  })
 })
 
 describe('source requests', () => {
