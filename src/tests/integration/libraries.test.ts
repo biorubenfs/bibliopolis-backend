@@ -313,6 +313,33 @@ describe('libraries CRUD basic tests', async () => {
     expect(await importsDao.collection.countDocuments({ libraryId })).equals(0)
     expect(await importItemsDao.collection.countDocuments({ importId })).equals(0)
   })
+
+  it('DELETE /libraries/:id - an admin removing a library of another user should remove it from the owner user books', async () => {
+    const ownerId = '01J9XDBGCX8QM0GW67T7QGKS41'
+    const ownerUserBookId = '01J9XDF6YJWYZ7EC2MDR8R58MW'
+    const libraryId = '01JZADM1NDE1ETE0THERUSERL1'
+    const now = new Date()
+    await librariesDao.collection.insertOne({
+      _id: libraryId,
+      name: 'library deleted by an admin',
+      description: 'library of another user',
+      books: [ownerUserBookId],
+      userId: ownerId,
+      createdAt: now,
+      updatedAt: now
+    })
+    await userBooksDao.collection.updateOne({ _id: ownerUserBookId }, { $push: { libraries: libraryId } })
+
+    const { accessToken } = await testUtils.login('admin01@email.com', userPassword)
+    const response = await fetch(new URL(`/libraries/${libraryId}`, librariesUrl), {
+      headers: { Authorization: testUtils.buildAuthorizationHeader(accessToken) },
+      method: 'DELETE'
+    })
+
+    expect(response.status).equals(204)
+    expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(0)
+    expect(await userBooksDao.collection.countDocuments({ libraries: libraryId })).equals(0)
+  })
 })
 
 describe('libraries books management tests', async () => {
