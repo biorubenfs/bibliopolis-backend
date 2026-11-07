@@ -12,3 +12,4 @@ nav:
       - Libraries: api/libraries.md
       - User Books: api/user-books.md
       - External: api/external.md
+      - Imports: api/imports.md

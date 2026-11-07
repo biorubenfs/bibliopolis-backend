@@ -10,5 +10,11 @@ export enum ApiRestErrorCode {
   InvalidPassword = 'INVALID PASSWORD',
   ApiBooksError = 'BOOKS API ERROR',
   SourcesUnavailable = 'SOURCES UNAVAILABLE ERROR',
-  TooManyRequests = 'TOO MANY REQUESTS ERROR'
+  TooManyRequests = 'TOO MANY REQUESTS ERROR',
+  InvalidImportFile = 'INVALID IMPORT FILE',
+  ImportTooManyRows = 'IMPORT TOO MANY ROWS',
+  ImportWithoutIsbnColumn = 'IMPORT WITHOUT ISBN COLUMN',
+  ImportWithoutValidIsbn = 'IMPORT WITHOUT VALID ISBN',
+  ImportFileTooLarge = 'IMPORT FILE TOO LARGE',
+  ImportAlreadyActive = 'IMPORT ALREADY ACTIVE'
 }

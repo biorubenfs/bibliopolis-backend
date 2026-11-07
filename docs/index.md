@@ -12,6 +12,7 @@ API REST de Bibliopolis para gestionar usuarios, sus bibliotecas personales y lo
 | [Libraries](api/libraries.md)    | `/libraries`  | Bibliotecas del usuario y libros que contienen                           |
 | [User Books](api/user-books.md)  | `/user-books` | Ejemplares de libros de un usuario (valoración, notas, exportación)      |
 | [External](api/external.md)      | `/external`   | Búsqueda de un libro por ISBN en el catálogo y en las fuentes externas   |
+| [Imports](api/imports.md)        | `/imports`    | Importación de libros a una biblioteca desde un fichero CSV              |
 
 Además, `GET /` es un endpoint público de estado:
 
@@ -115,6 +116,10 @@ Todos los errores tienen el mismo formato:
 | ------ | --------------------------- | ----------------------------------------------------------------- |
 | 400    | `VALIDATION ERROR`          | Body o query params no válidos                                    |
 | 400    | `INVALID PASSWORD`          | La contraseña actual no es correcta (cambio de contraseña)        |
+| 400    | `INVALID IMPORT FILE`       | Falta el fichero de una importación, o no se puede leer           |
+| 400    | `IMPORT TOO MANY ROWS`      | El fichero de una importación supera el límite de filas           |
+| 400    | `IMPORT WITHOUT ISBN COLUMN` | El fichero de una importación no tiene columna de ISBN           |
+| 400    | `IMPORT WITHOUT VALID ISBN` | El fichero de una importación no tiene ninguna fila válida        |
 | 401    | `TOKEN NOT PROVIDED ERROR`  | Falta el token                                                    |
 | 401    | `INVALID TOKEN ERROR`       | Token no válido o caducado, o se requiere rol `admin`             |
 | 403    | `INVALID CREDENTIALS ERROR` | Email o contraseña incorrectos en el login                        |
@@ -122,6 +127,8 @@ Todos los errores tienen el mismo formato:
 | 404    | `NOT FOUND ERROR`           | El recurso no existe                                              |
 | 404    | `BOOKS API ERROR`           | El libro no se ha encontrado en ninguna fuente externa            |
 | 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca, …)       |
+| 409    | `IMPORT ALREADY ACTIVE`     | El usuario ya tiene una importación en curso                      |
+| 413    | `IMPORT FILE TOO LARGE`     | El fichero de una importación supera el límite de tamaño          |
 | 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos                             |
 | 500    | `INTERNAL SERVER ERROR`     | Error inesperado del servidor                                     |
 | 503    | `SOURCES UNAVAILABLE ERROR` | Libro no encontrado y al menos una fuente externa ha fallado      |

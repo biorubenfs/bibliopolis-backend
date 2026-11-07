@@ -3,6 +3,8 @@ import { runInTransaction } from '../../transaction-helper.js'
 import { Page } from '../../types.js'
 import { BookNotFoundError } from '../books/books.error.js'
 import { NewBook } from '../books/books.interfaces.js'
+import importItemsDao from '../imports/import-items.dao.js'
+import importsDao from '../imports/imports.dao.js'
 import booksService from '../books/books.service.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import { UserBookNotFoundError } from '../user-books/user-books.error.js'
@@ -68,6 +70,8 @@ class LibrariesService {
 
     await librariesDao.delete(library.entity.id)
     await userBooksDao.deleteAll(id, userId)
+    await importItemsDao.deleteByImports(await importsDao.findIdsByLibrary(id))
+    await importsDao.deleteByLibrary(id)
   }
 
   async list (userId: string, role: Role, page: Page, search?: string): Promise<CollectionResultObject<LibraryEntity>> {

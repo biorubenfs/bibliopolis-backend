@@ -261,6 +261,8 @@ Elimina una biblioteca. Solo el propietario o un administrador pueden eliminarla
 
 Los user books de la biblioteca **no se eliminan**: solo se quita la biblioteca de su lista `libraries`.
 
+Sus [importaciones](imports.md) y los informes de estas **sí se eliminan**.
+
 ### Respuestas
 
 #### 204 No Content
