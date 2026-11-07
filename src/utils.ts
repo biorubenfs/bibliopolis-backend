@@ -7,6 +7,7 @@ import logger from './logger.js'
 import googleBooksApi from './resources/sources/google-books/google-books.api.js'
 import openLibraryApi from './resources/sources/open-library/open-library.api.js'
 import { NewBook } from './resources/books/books.interfaces.js'
+import { ISBNUtils } from './utils/isbn.utils.js'
 
 export enum CoverSize {
   S = 'S',
@@ -125,17 +126,21 @@ export async function getBookFromSourcesApis (isbn: string): Promise<NewBook> {
     ? googleBooksVolume.volumeInfo.authors
     : openLibraryAuthors ?? []
 
+  // The sources may answer with another edition or list several ISBNs, so only the requested one is
+  // reliable. The rest of the data can still belong to another edition: see docs/api/external.md
+  const { isbn10, isbn13 } = ISBNUtils.sanitizeIsbn(isbn).length === 10
+    ? ISBNUtils.calculateIsbns(isbn, null)
+    : ISBNUtils.calculateIsbns(null, isbn)
+
   const bookData: NewBook = {
     title: googleBooksVolume?.volumeInfo.title ?? openLibraryBook?.title ?? '',
-    isbn13: googleBooksVolume?.volumeInfo.industryIdentifiers?.find(id => id.type === 'ISBN_13')?.identifier ?? openLibraryBook?.isbn_13?.at(0) ?? null,
-    isbn10: googleBooksVolume?.volumeInfo.industryIdentifiers?.find(id => id.type === 'ISBN_10')?.identifier ?? openLibraryBook?.isbn_10?.at(0) ?? null,
+    isbn13,
+    isbn10,
     authors,
     cover
   }
 
-  const sourceIsbn = bookData.isbn13 ?? bookData.isbn10
-
-  if (bookData.title == null || bookData.title === '' || sourceIsbn == null) {
+  if (bookData.title == null || bookData.title === '') {
     // A source that failed might have the book, so we cannot claim that it does not exist
     if (googleBooksResult.status === 'rejected' || openLibraryResult.status === 'rejected') {
       throw new SourcesUnavailableError('Book sources are currently unavailable')
