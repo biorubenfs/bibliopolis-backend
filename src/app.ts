@@ -6,6 +6,9 @@ import Server from './server.js'
 import { startCronTasks } from './tasks/scheduler.js'
 import booksDao from './resources/books/books.dao.js'
 import userBooksDao from './resources/user-books/user-books.dao.js'
+import importsDao from './resources/imports/imports.dao.js'
+import importItemsDao from './resources/imports/import-items.dao.js'
+import importsWorker from './resources/imports/imports.worker.js'
 
 export default class App {
   server?: Server
@@ -29,8 +32,11 @@ export default class App {
     await booksDao.init()
     await userBooksDao.init()
     await librariesDao.init()
+    await importsDao.init()
+    await importItemsDao.init()
 
     startCronTasks()
+    await importsWorker.start()
 
     logger.info('app started succesfully')
     logger.info('press CTRL+C to stop app')
@@ -39,6 +45,7 @@ export default class App {
   async stop (): Promise<void> {
     logger.info('stopping app...')
     await this.server?.stop()
+    await importsWorker.stop()
     await mongo.stop()
     logger.info('app stopped succesfully')
   }

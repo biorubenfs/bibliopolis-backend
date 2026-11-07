@@ -100,7 +100,7 @@ class LibrariesDao extends Dao<DBLibrary> {
   async addBookIdToLibrary (libraryId: string, bookId: string, session?: ClientSession): Promise<LibraryEntity | null> {
     const updatedLibrary: DBLibrary | null = await this.collection.findOneAndUpdate(
       { _id: libraryId },
-      { $push: { books: bookId } },
+      { $addToSet: { books: bookId } },
       { returnDocument: 'after', session })
     return dbLibraryToEntity(updatedLibrary)
   }

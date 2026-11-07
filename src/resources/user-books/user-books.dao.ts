@@ -103,6 +103,17 @@ class UserBooksDao extends Dao<DBUserBook> {
     return dbUserBookToEntity(userBook)
   }
 
+  async findByUserAndBook (userId: string, bookId: string, session?: ClientSession): Promise<UserBookEntity | null> {
+    return dbUserBookToEntity(await this.collection.findOne({ userId, bookId }, { session }))
+  }
+
+  async findIsbn13InLibrary (userId: string, libraryId: string, isbns13: readonly string[]): Promise<string[]> {
+    const dbUserBooks = await this.collection
+      .find({ userId, libraries: libraryId, bookIsbn13: { $in: [...isbns13] } }, { projection: { bookIsbn13: 1 } })
+      .toArray()
+    return dbUserBooks.map(dbUserBook => dbUserBook.bookIsbn13)
+  }
+
   async upsert (libraryId: string, userId: string, book: BookEntity, session: ClientSession): Promise<UserBookEntity | null> {
     const userBook = await this.collection.findOneAndUpdate(
       { userId, bookId: book.id },
@@ -117,7 +128,8 @@ class UserBooksDao extends Dao<DBUserBook> {
           rating: null,
           notes: null
         },
-        $push: { libraries: libraryId } // or $addToSet if we want to avoid duplicates, although we control this situation on libraries service)
+        // A book can be added by hand while an import of the same book is running
+        $addToSet: { libraries: libraryId }
       },
       { upsert: true, session, returnDocument: 'after' } // options
     )

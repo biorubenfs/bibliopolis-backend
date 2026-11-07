@@ -12,6 +12,7 @@ import cors from 'cors'
 import userBooksRouter from './resources/user-books/user-books.router.js'
 import { requestLogger } from './middlewares/request-logger.js'
 import externalRouter from './resources/external/external.router.js'
+import importsRouter from './resources/imports/imports.router.js'
 
 import { readFile } from 'fs/promises'
 const pkg = JSON.parse(await readFile('./package.json', 'utf-8'))
@@ -64,6 +65,7 @@ export default class Server {
     this.express.use('/libraries', librariesRouter)
     this.express.use('/user-books', userBooksRouter)
     this.express.use('/external', externalRouter)
+    this.express.use('/imports', importsRouter)
 
     // error handling
     this.express.use(errorHandler)
