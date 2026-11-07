@@ -110,8 +110,8 @@ class ImportItemsDao extends Dao<DBImportItem> {
     )
   }
 
-  async deleteByImports (importIds: readonly string[]): Promise<void> {
-    await this.collection.deleteMany({ importId: { $in: [...importIds] } })
+  async deleteByImports (importIds: readonly string[], session?: ClientSession): Promise<void> {
+    await this.collection.deleteMany({ importId: { $in: [...importIds] } }, { session })
   }
 }
 

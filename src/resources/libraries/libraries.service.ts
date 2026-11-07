@@ -68,10 +68,14 @@ class LibrariesService {
   async delete (id: string, userId: string, role: Role): Promise<void> {
     const library = await this.get(id, userId, role)
 
-    await librariesDao.delete(library.entity.id)
-    await userBooksDao.deleteAll(id, userId)
-    await importItemsDao.deleteByImports(await importsDao.findIdsByLibrary(id))
-    await importsDao.deleteByLibrary(id)
+    await runInTransaction(async (session) => {
+      await librariesDao.delete(library.entity.id, session)
+      await userBooksDao.deleteAll(id, userId, session)
+      await importItemsDao.deleteByImports(await importsDao.findIdsByLibrary(id, session), session)
+      await importsDao.deleteByLibrary(id, session)
+      // runInTransaction treats a null or undefined result as an aborted transaction
+      return true
+    })
   }
 
   async list (userId: string, role: Role, page: Page, search?: string): Promise<CollectionResultObject<LibraryEntity>> {

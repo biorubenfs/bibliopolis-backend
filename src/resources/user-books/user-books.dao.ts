@@ -185,9 +185,8 @@ class UserBooksDao extends Dao<DBUserBook> {
     return total
   }
 
-  async deleteAll (libraryId: string, userId: string): Promise<void> {
-    /* add session to use in a transaction */
-    await this.collection.updateMany({ libraries: libraryId, userId }, { $pull: { libraries: libraryId } })
+  async deleteAll (libraryId: string, userId: string, session?: ClientSession): Promise<void> {
+    await this.collection.updateMany({ libraries: libraryId, userId }, { $pull: { libraries: libraryId } }, { session })
   }
 
   async update (id: string, userId: string, data: UpdateUserBook): Promise<UserBookEntity | null> {

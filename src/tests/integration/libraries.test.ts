@@ -1,9 +1,14 @@
-import { afterAll, beforeAll, describe, it, expect } from 'vitest'
+import { afterAll, beforeAll, describe, it, expect, vi } from 'vitest'
 import testUtils from '../utils/utils.js'
 import { DataSetType, loadDataInDb, MockDataSet } from '../../load-data.js'
 import mongo from '../../mongo.js'
 import librariesDao from '../../resources/libraries/libraries.dao.js'
+import librariesService from '../../resources/libraries/libraries.service.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
+import importsDao from '../../resources/imports/imports.dao.js'
+import importItemsDao from '../../resources/imports/import-items.dao.js'
+import { ImportItemOutcome, ImportStatus } from '../../resources/imports/imports.interfaces.js'
+import { Role } from '../../resources/users/users.interfaces.js'
 import { ApiRestErrorCode } from '../../error/types.js'
 
 const librariesUrl = new URL('/libraries', testUtils.TESTS_BASE_URL)
@@ -249,6 +254,64 @@ describe('libraries CRUD basic tests', async () => {
     })
 
     expect(response.status).equals(403)
+  })
+
+  it('deleting a library should leave everything as it was when a step fails', async () => {
+    const libraryId = '01JZDE1ETEFA11STRANSACT10N'
+    const userBookId = '01J9W9P6M5S0VRKVSRX3Q9T3W7'
+    const importId = '01JZDE1ETEFA11STRANSACT1MP'
+    const now = new Date()
+    await librariesDao.collection.insertOne({
+      _id: libraryId,
+      name: 'library whose deletion fails',
+      description: 'library whose deletion fails',
+      books: [userBookId],
+      userId,
+      createdAt: now,
+      updatedAt: now
+    })
+    await userBooksDao.collection.updateOne({ _id: userBookId }, { $push: { libraries: libraryId } })
+    await importsDao.collection.insertOne({
+      _id: importId,
+      userId,
+      libraryId,
+      fileName: 'books.csv',
+      status: ImportStatus.Queued,
+      createdAt: now,
+      updatedAt: now,
+      finishedAt: null
+    })
+    await importItemsDao.collection.insertOne({
+      _id: '01JZDE1ETEFA11STRANSACT1TM',
+      importId,
+      row: 2,
+      rawIsbn: '9788408292609',
+      isbn13: '9788408292609',
+      outcome: ImportItemOutcome.Queued,
+      bookTitle: null,
+      resolution: null
+    })
+
+    // The HTTP server runs in another process, so the failure can only be simulated on the service
+    const deleteImports = vi.spyOn(importsDao, 'deleteByLibrary').mockRejectedValue(new Error('database is down'))
+    try {
+      await expect(librariesService.delete(libraryId, userId, Role.Regular)).rejects.toThrow('database is down')
+    } finally {
+      deleteImports.mockRestore()
+    }
+
+    expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(1)
+    expect(await userBooksDao.collection.countDocuments({ _id: userBookId, libraries: libraryId })).equals(1)
+    expect(await importsDao.collection.countDocuments({ libraryId })).equals(1)
+    expect(await importItemsDao.collection.countDocuments({ importId })).equals(1)
+
+    // Once the failure is gone, the deletion can be repeated and removes everything
+    await librariesService.delete(libraryId, userId, Role.Regular)
+
+    expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(0)
+    expect(await userBooksDao.collection.countDocuments({ libraries: libraryId })).equals(0)
+    expect(await importsDao.collection.countDocuments({ libraryId })).equals(0)
+    expect(await importItemsDao.collection.countDocuments({ importId })).equals(0)
   })
 })
 
