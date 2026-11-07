@@ -86,13 +86,13 @@ class ImportsDao extends Dao<DBImport> {
     await this.collection.updateOne({ _id: id }, { $set: { status, updatedAt: now, finishedAt: now } })
   }
 
-  async findIdsByLibrary (libraryId: string): Promise<string[]> {
-    const dbImports = await this.collection.find({ libraryId }, { projection: { _id: 1 } }).toArray()
+  async findIdsByLibrary (libraryId: string, session?: ClientSession): Promise<string[]> {
+    const dbImports = await this.collection.find({ libraryId }, { projection: { _id: 1 }, session }).toArray()
     return dbImports.map(dbImport => dbImport._id)
   }
 
-  async deleteByLibrary (libraryId: string): Promise<void> {
-    await this.collection.deleteMany({ libraryId })
+  async deleteByLibrary (libraryId: string, session?: ClientSession): Promise<void> {
+    await this.collection.deleteMany({ libraryId }, { session })
   }
 }
 

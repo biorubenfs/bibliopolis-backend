@@ -77,8 +77,8 @@ class LibrariesDao extends Dao<DBLibrary> {
     return dbLibraryToEntity(dbLibrary)
   }
 
-  async delete (id: string): Promise<void> {
-    await this.collection.deleteOne({ _id: id })
+  async delete (id: string, session?: ClientSession): Promise<void> {
+    await this.collection.deleteOne({ _id: id }, { session })
   }
 
   async list (userId: string, role: Role, skip: number, limit: number, search?: string): Promise<readonly LibraryEntity[]> {
