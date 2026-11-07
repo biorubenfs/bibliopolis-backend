@@ -1,6 +1,6 @@
 import config from '../../../config.js'
-import { SourcesUnavailableError } from '../../../error/errors.js'
 import logger from '../../../logger.js'
+import { sourceHttpError } from '../source-http-error.js'
 import { SOURCE_REQUEST_TIMEOUT_MS } from '../sources.constants.js'
 import { GoogleBooksVolume } from './google-books.types.js'
 
@@ -27,7 +27,7 @@ class GoogleBooksApi {
     }
 
     if (!response.ok) {
-      throw new SourcesUnavailableError(`HTTP error ${response.status}: ${response.statusText}`)
+      throw await sourceHttpError(response)
     }
 
     const responseData = await response.json()

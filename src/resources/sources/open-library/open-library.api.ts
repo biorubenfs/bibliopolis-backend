@@ -1,6 +1,6 @@
 import config from '../../../config.js'
-import { SourcesUnavailableError } from '../../../error/errors.js'
 import logger from '../../../logger.js'
+import { sourceHttpError } from '../source-http-error.js'
 import { SOURCE_REQUEST_TIMEOUT_MS } from '../sources.constants.js'
 import { OpenLibraryAuthor, OpenLibraryBook, OpenLibraryWork } from './open-library.types.js'
 
@@ -19,7 +19,7 @@ class OpenLibraryApi {
     }
 
     if (!response.ok) {
-      throw new SourcesUnavailableError(`HTTP error ${response.status}: ${response.statusText}`)
+      throw await sourceHttpError(response)
     }
 
     return await response.json() as T

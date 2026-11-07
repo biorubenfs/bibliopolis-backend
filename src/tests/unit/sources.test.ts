@@ -46,6 +46,51 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+describe('errors of the sources', () => {
+  const googleForbidden = json({
+    error: {
+      code: 403,
+      message: 'The provided API key has an IP address restriction.',
+      status: 'PERMISSION_DENIED'
+    }
+  }, 403)
+
+  it('should explain the failure with the message Google Books answers', async () => {
+    stubSources(googleForbidden, notFound)
+
+    await expect(googleBooksApi.fetchBookByIsbn(ISBN)).rejects.toSatisfy((error: Error) =>
+      error instanceof SourcesUnavailableError &&
+      error.message === 'HTTP error 403: The provided API key has an IP address restriction.'
+    )
+  })
+
+  it('should use a plain error text from Open Library', async () => {
+    stubSources(googleFound, serverError)
+
+    await expect(openLibraryApi.fetchBookByIsbn(ISBN)).rejects.toThrow('HTTP error 500: boom')
+  })
+
+  it('should cut a long response that is not JSON', async () => {
+    stubSources(() => new Response(`<html>${'x'.repeat(5000)}</html>`, { status: 502 }), notFound)
+
+    await expect(googleBooksApi.fetchBookByIsbn(ISBN)).rejects.toSatisfy((error: Error) =>
+      error.message.startsWith('HTTP error 502: <html>xxx') && error.message.length < 550
+    )
+  })
+
+  it('should use the status text if the response has no body', async () => {
+    stubSources(() => new Response(null, { status: 503, statusText: 'Service Unavailable' }), notFound)
+
+    await expect(googleBooksApi.fetchBookByIsbn(ISBN)).rejects.toThrow('HTTP error 503: Service Unavailable')
+  })
+
+  it('should not reveal the detail to whoever asks for the book', async () => {
+    stubSources(googleForbidden, notFound)
+
+    await expect(getBookFromSourcesApis(ISBN)).rejects.toThrow('Book sources are currently unavailable')
+  })
+})
+
 describe('getBookFromSourcesApis', () => {
   it.each([
     ['Google Books found, Open Library not found', googleFound, notFound],
