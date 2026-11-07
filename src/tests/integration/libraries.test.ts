@@ -313,7 +313,7 @@ describe('libraries CRUD basic tests', async () => {
     expect(await importsDao.collection.countDocuments({ libraryId })).equals(0)
     expect(await importItemsDao.collection.countDocuments({ importId })).equals(0)
   })
-  
+
   it('DELETE /libraries/:id - an admin removing a library of another user should remove it from the owner user books', async () => {
     const ownerId = '01J9XDBGCX8QM0GW67T7QGKS41'
     const ownerUserBookId = '01J9XDF6YJWYZ7EC2MDR8R58MW'
