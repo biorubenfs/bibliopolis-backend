@@ -5,6 +5,8 @@ Este documento describe los endpoints para gestionar etiquetas. Las etiquetas si
 - **Personales:** las crea un usuario y solo las ve y usa él.
 - **Globales** (`userId: null`): las ven y usan todos los usuarios, pero ninguno puede modificarlas ni borrarlas. Están previstas para que las cree un administrador; todavía no hay endpoints para hacerlo.
 
+Todos los endpoints son solo para usuarios `regular`: un administrador recibe un `403` (`must be a regular user`).
+
 Atributos de una etiqueta:
 
 | Campo       | Tipo           | Descripción                                                         |

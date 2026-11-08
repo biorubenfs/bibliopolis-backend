@@ -1,17 +1,17 @@
 import usersDao from './users.dao.js'
 import { CollectionResultObject, SingleResultObject } from '../../results.js'
-import { CreateUser, Role, UpdateUser } from './users.interfaces.js'
+import { CreateUser, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
 import bcrypt from 'bcryptjs'
 import config from '../../config.js'
-import { InvalidCurrentPassword, UserEmailAlreadyExists, UserNotFoundError } from './users.error.js'
+import { InvalidCurrentPassword, UserEmailAlreadyExists, UserNotFoundError, UserPasswordResetForbiddenError } from './users.error.js'
 import { UserEntity } from './users.entity.js'
 import { Page } from '../../types.js'
-import crypto from 'crypto'
 import robohashApi from './robohash/robohash.api.js'
 import { transformImageToBase64 } from '../../utils.js'
 import logger from '../../logger.js'
+import { MongoServerError } from 'mongodb'
+import { generatePassword } from './users.utils.js'
 
-const VALIDATION_CODE_LIMIT = 9999
 const DEFAULT_AVATAR_BASE64 = '' // TODO: add a default avatar
 
 export function hashPasswordSync (password: string): string {
@@ -19,25 +19,49 @@ export function hashPasswordSync (password: string): string {
 }
 
 class UsersService {
-  async signup (body: Omit<CreateUser, 'avatar'>): Promise<UserEntity> {
+  /** Creates a regular user with a generated password, returned only here and never stored in plain text. */
+  async signup (body: Pick<CreateUser, 'name' | 'email'>): Promise<SingleResultObject<UserEntity>> {
     const existingUser = await usersDao.findByEmail(body.email)
     if (existingUser != null) {
       throw new UserEmailAlreadyExists(`there is already a user registered with email ${body.email}`)
     }
 
-    const validationCode = crypto.randomInt(VALIDATION_CODE_LIMIT).toString()
+    const password = generatePassword()
 
     // TODO: Decouple user creation from avatar creation. Create user with default or null avatar and update it asynchronously after fetching from RoboHash.
     const userData: CreateUser = {
-      ...body,
-      password: hashPasswordSync(body.password),
-      validationCode,
+      name: body.name,
+      email: body.email,
+      password: hashPasswordSync(password),
       avatar: await this.generateAvatar(body.name)
     }
 
-    const newUser = await usersDao.create(userData, Role.Regular)
+    try {
+      const newUser = await usersDao.create(userData, Role.Regular)
+      return new SingleResultObject(newUser, { password })
+    } catch (error) {
+      // The unique index catches the concurrent signups that passed the check above
+      if (error instanceof MongoServerError && error.code === 11000) {
+        throw new UserEmailAlreadyExists(`there is already a user registered with email ${body.email}`)
+      }
+      throw error
+    }
+  }
 
-    return newUser
+  /** Only for regular users: admins change their password from their profile. */
+  async resetPassword (userId: string): Promise<SingleResultObject<UserEntity>> {
+    const user = await this.getById(userId)
+    if (user.entity.role !== Role.Regular) {
+      throw new UserPasswordResetForbiddenError('only the password of a regular user can be reset')
+    }
+
+    const password = generatePassword()
+    const updUser = await usersDao.updatePassword(userId, hashPasswordSync(password))
+    if (updUser == null) {
+      throw new UserNotFoundError('user not found')
+    }
+
+    return new SingleResultObject(updUser, { password })
   }
 
   async getById (id: string): Promise<SingleResultObject<UserEntity>> {
@@ -59,10 +83,10 @@ class UsersService {
     return user
   }
 
-  async list (page: Page): Promise<CollectionResultObject<UserEntity>> {
+  async list (page: Page, filter: UsersListFilter = {}): Promise<CollectionResultObject<UserEntity>> {
     const [users, total] = await Promise.all([
-      await usersDao.list(page.skip, page.limit),
-      await usersDao.count()
+      await usersDao.list(page.skip, page.limit, filter),
+      await usersDao.count(filter)
     ])
 
     return new CollectionResultObject(users, { ...page, total })
@@ -97,10 +121,6 @@ class UsersService {
     }
 
     return new SingleResultObject(updUser)
-  }
-
-  async validate (id: string, validationCode: string): Promise<void> {
-    await usersDao.validate(id, validationCode)
   }
 
   /** A RoboHash failure must not block the operation: it falls back to the default avatar. */

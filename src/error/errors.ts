@@ -26,6 +26,12 @@ export class ExpiredTokenError extends ApiError {
   }
 }
 
+export class ForbiddenError extends ApiError {
+  constructor (message: string) {
+    super(ApiRestErrorCode.PermissionError, 403, message)
+  }
+}
+
 export class BooksApiError extends ApiError {
   constructor (message: string) {
     super(ApiRestErrorCode.ApiBooksError, 404, message)

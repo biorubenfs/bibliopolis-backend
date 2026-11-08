@@ -1,23 +1,18 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
-import { isNotNull } from '../../utils.js'
+import { escapeRegExp, isNotNull } from '../../utils.js'
 import { DBLibrary, LibrariesListFilter, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
-import { Role } from '../users/users.interfaces.js'
 import { ClientSession, Filter } from 'mongodb'
 
 function dbLibraryToEntity (dbLibrary: DBLibrary | null): LibraryEntity | null {
   return dbLibrary == null ? null : new LibraryEntity(dbLibrary)
 }
 
-function escapeRegExp (value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
-function listLibrariesMongoFilter (userId: string, role: Role, filter: LibrariesListFilter): Filter<DBLibrary> {
+function listLibrariesMongoFilter (userId: string, filter: LibrariesListFilter): Filter<DBLibrary> {
   const { search, favorites, tagIds } = filter
   const mongoFilter: Filter<DBLibrary> = {
-    ...(role === Role.Regular ? { userId } : {}),
+    userId,
     ...(favorites === true ? { isFavorite: true } : {}),
     ...(tagIds != null && tagIds.length > 0 ? { tagIds: { $all: [...tagIds] } } : {})
   }
@@ -92,8 +87,8 @@ class LibrariesDao extends Dao<DBLibrary> {
     await this.collection.deleteOne({ _id: id }, { session })
   }
 
-  async list (userId: string, role: Role, skip: number, limit: number, filter: LibrariesListFilter = {}): Promise<readonly LibraryEntity[]> {
-    const mongoFilter = listLibrariesMongoFilter(userId, role, filter)
+  async list (userId: string, skip: number, limit: number, filter: LibrariesListFilter = {}): Promise<readonly LibraryEntity[]> {
+    const mongoFilter = listLibrariesMongoFilter(userId, filter)
     const dbLibraries = await this.collection.find(mongoFilter)
       // Favorites first; _id keeps the pagination stable
       .sort({ isFavorite: -1, _id: 1 })
@@ -103,8 +98,8 @@ class LibrariesDao extends Dao<DBLibrary> {
     return dbLibraries.map(dbLibrary => dbLibraryToEntity(dbLibrary)).filter(isNotNull)
   }
 
-  async count (userId: string, role: Role, filter: LibrariesListFilter = {}): Promise<number> {
-    const mongoFilter = listLibrariesMongoFilter(userId, role, filter)
+  async count (userId: string, filter: LibrariesListFilter = {}): Promise<number> {
+    const mongoFilter = listLibrariesMongoFilter(userId, filter)
     const total = await this.collection.countDocuments(mongoFilter)
     return total
   }

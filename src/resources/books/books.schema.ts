@@ -48,3 +48,41 @@ export const newBookSchema = z
     message: 'isbn13 and isbn10 do not correspond to the same book',
     path: ['isbn13', 'isbn10']
   })
+
+const isbnSchema = z.string()
+  .transform(ISBNUtils.sanitizeIsbn)
+  .refine((value) => ISBNUtils.isValidIsbn10(value) || ISBNUtils.isValidIsbn13(value), { message: 'Invalid ISBN-10 or ISBN-13' })
+
+const titleSchema = z.string().trim().min(1)
+const authorsSchema = z.array(z.string().trim().min(1))
+
+// Strict: the cover always comes from the sources, so a body with a cover (or any other field) is rejected
+export const createBookSchema = z.discriminatedUnion('mode', [
+  // The data comes from the sources
+  z.object({
+    mode: z.literal('sources'),
+    isbn: isbnSchema
+  }).strict(),
+  // Written by the admin; the book has no cover until a source has one
+  z.object({
+    mode: z.literal('manual'),
+    isbn: isbnSchema,
+    title: titleSchema,
+    authors: authorsSchema.min(1)
+  }).strict()
+])
+
+// Strict: the ISBNs cannot be changed
+export const updateBookSchema = z.object({
+  title: titleSchema.optional(),
+  authors: authorsSchema.optional(),
+  // The backend asks that source for the cover of the book; null removes the cover
+  coverSource: z.nativeEnum(BooksSource).nullable().optional()
+}).strict().refine(
+  (data) => data.title !== undefined || data.authors !== undefined || data.coverSource !== undefined,
+  { message: 'At least one of title, authors or coverSource must be provided' }
+)
+
+export const booksQuerySchema = z.object({
+  search: z.string().trim().max(100).optional()
+})

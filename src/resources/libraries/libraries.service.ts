@@ -8,7 +8,6 @@ import importsDao from '../imports/imports.dao.js'
 import booksService from '../books/books.service.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import { UserBookNotFoundError } from '../user-books/user-books.error.js'
-import { Role } from '../users/users.interfaces.js'
 import tagsDao from '../tags/tags.dao.js'
 import { TagNotFoundError } from '../tags/tags.error.js'
 import librariesDao from './libraries.dao.js'
@@ -44,8 +43,8 @@ class LibrariesService {
     return new SingleResultObject(newLibrary)
   }
 
-  async update (id: string, body: UpdateLibrary, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
-    const library = await this.get(id, userId, role)
+  async update (id: string, body: UpdateLibrary, userId: string): Promise<SingleResultObject<LibraryEntity>> {
+    const library = await this.get(id, userId)
     if (body.name != null) {
       await this.checkLibraryNameAvailable(body.name, userId, id)
     }
@@ -54,7 +53,6 @@ class LibrariesService {
       throw new LibraryNotFoundError('library not found')
     }
     if (body.tagIds != null) {
-      // Checked against the owner, not the requester: an admin may edit another user's library
       await this.checkTagsUsable(body.tagIds, library.entity.userId)
     }
 
@@ -66,22 +64,22 @@ class LibrariesService {
     return new SingleResultObject(updatedLibrary)
   }
 
-  async get (id: string, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
+  async get (id: string, userId: string): Promise<SingleResultObject<LibraryEntity>> {
     const library = await librariesDao.findById(id)
 
     if (library == null) {
       throw new LibraryNotFoundError('library not found')
     }
 
-    if (role !== Role.Admin && library.userId !== userId) {
+    if (library.userId !== userId) {
       throw new LibraryPermissionsError('library not found')
     }
 
     return new SingleResultObject(library)
   }
 
-  async delete (id: string, userId: string, role: Role): Promise<void> {
-    const library = await this.get(id, userId, role)
+  async delete (id: string, userId: string): Promise<void> {
+    const library = await this.get(id, userId)
 
     await runInTransaction(async (session) => {
       await librariesDao.delete(library.entity.id, session)
@@ -93,10 +91,10 @@ class LibrariesService {
     })
   }
 
-  async list (userId: string, role: Role, page: Page, filter: LibrariesListFilter = {}): Promise<CollectionResultObject<LibraryEntity>> {
+  async list (userId: string, page: Page, filter: LibrariesListFilter = {}): Promise<CollectionResultObject<LibraryEntity>> {
     const [libraries, total] = await Promise.all([
-      await librariesDao.list(userId, role, page.skip, page.limit, filter),
-      await librariesDao.count(userId, role, filter)
+      await librariesDao.list(userId, page.skip, page.limit, filter),
+      await librariesDao.count(userId, filter)
     ])
 
     const mockPaginationObject = { ...page, total }
@@ -104,7 +102,7 @@ class LibrariesService {
   }
 
   async addBook (libraryId: string, newBookData: NewBook, userId: string): Promise<SingleResultObject<LibraryEntity>> {
-    const library = await this.get(libraryId, userId, Role.Regular)
+    const library = await this.get(libraryId, userId)
     if (newBookData.isbn13 == null && newBookData.isbn10 == null) {
       throw new BookNotFoundError('isbn13 or isbn10 must be provided')
     }
@@ -130,7 +128,7 @@ class LibrariesService {
   }
 
   async removeBook (libraryId: string, userBookId: string, userId: string): Promise<SingleResultObject<LibraryEntity>> {
-    const library = await this.get(libraryId, userId, Role.Regular)
+    const library = await this.get(libraryId, userId)
 
     if (!library.entity.books.includes(userBookId)) {
       throw new BookNotFoundInLibraryError(`book with id ${userBookId} not found in library ${libraryId}`)

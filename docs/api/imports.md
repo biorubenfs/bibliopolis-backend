@@ -2,7 +2,7 @@
 
 Importación de libros a una biblioteca existente a partir de un fichero CSV con una columna de ISBN. La importación se procesa en segundo plano, fila a fila, y al terminar queda un informe guardado con el resultado de cada fila.
 
-Todos los endpoints son solo para el propietario de la importación. Los administradores no tienen un acceso especial. Las importaciones y sus filas se borran junto con su biblioteca.
+Todos los endpoints son solo para el propietario de la importación. Un administrador no tiene bibliotecas y recibe un `403` (`must be a regular user`) en todos ellos. Las importaciones y sus filas se borran junto con su biblioteca.
 
 ## Entidad Import
 

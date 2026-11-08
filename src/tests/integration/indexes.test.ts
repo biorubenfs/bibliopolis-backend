@@ -14,7 +14,7 @@ import { BooksSource } from '../../resources/sources/sources.types.js'
 import { DBUserBook } from '../../resources/user-books/user-books.interfaces.js'
 
 const booksUrl = new URL('/books', testUtils.TESTS_BASE_URL)
-const authHeader = testUtils.buildAuthorizationHeader(makeJwt('01J9BHWZ8N4B1JBSAFCBKQGERS', Role.Regular))
+const authHeader = testUtils.buildAuthorizationHeader(makeJwt('01J9BK7YX0D5NHHBN70Q4N7P69', Role.Admin))
 
 const EXISTING_ISBN13 = '9781732539419'
 const NEW_ISBN13_WITHOUT_ISBN10 = ['9791300000012', '9791300000029']
@@ -24,7 +24,7 @@ async function postBook (isbn13: string, title = 'A book'): Promise<Response> {
   return await fetch(booksUrl, {
     method: 'POST',
     headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, authors: ['An author'], isbn13, cover: { source: null, value: null } })
+    body: JSON.stringify({ mode: 'manual', title, authors: ['An author'], isbn: isbn13 })
   })
 }
 

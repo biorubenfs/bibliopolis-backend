@@ -8,7 +8,6 @@ import userBooksDao from '../../resources/user-books/user-books.dao.js'
 import importsDao from '../../resources/imports/imports.dao.js'
 import importItemsDao from '../../resources/imports/import-items.dao.js'
 import { ImportItemOutcome, ImportStatus } from '../../resources/imports/imports.interfaces.js'
-import { Role } from '../../resources/users/users.interfaces.js'
 import { ApiRestErrorCode } from '../../error/types.js'
 
 const librariesUrl = new URL('/libraries', testUtils.TESTS_BASE_URL)
@@ -297,7 +296,7 @@ describe('libraries CRUD basic tests', async () => {
     // The HTTP server runs in another process, so the failure can only be simulated on the service
     const deleteImports = vi.spyOn(importsDao, 'deleteByLibrary').mockRejectedValue(new Error('database is down'))
     try {
-      await expect(librariesService.delete(libraryId, userId, Role.Regular)).rejects.toThrow('database is down')
+      await expect(librariesService.delete(libraryId, userId)).rejects.toThrow('database is down')
     } finally {
       deleteImports.mockRestore()
     }
@@ -308,7 +307,7 @@ describe('libraries CRUD basic tests', async () => {
     expect(await importItemsDao.collection.countDocuments({ importId })).equals(1)
 
     // Once the failure is gone, the deletion can be repeated and removes everything
-    await librariesService.delete(libraryId, userId, Role.Regular)
+    await librariesService.delete(libraryId, userId)
 
     expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(0)
     expect(await userBooksDao.collection.countDocuments({ libraries: libraryId })).equals(0)
@@ -316,14 +315,14 @@ describe('libraries CRUD basic tests', async () => {
     expect(await importItemsDao.collection.countDocuments({ importId })).equals(0)
   })
 
-  it('DELETE /libraries/:id - an admin removing a library of another user should remove it from the owner user books', async () => {
+  it('DELETE /libraries/:id - an admin should get a 403 and not remove a library of another user', async () => {
     const ownerId = '01J9XDBGCX8QM0GW67T7QGKS41'
     const ownerUserBookId = '01J9XDF6YJWYZ7EC2MDR8R58MW'
     const libraryId = '01JZADM1NDE1ETE0THERUSERL1'
     const now = new Date()
     await librariesDao.collection.insertOne({
       _id: libraryId,
-      name: 'library deleted by an admin',
+      name: 'library not deleted by an admin',
       description: 'library of another user',
       books: [ownerUserBookId],
       isFavorite: false,
@@ -339,10 +338,12 @@ describe('libraries CRUD basic tests', async () => {
       headers: { Authorization: testUtils.buildAuthorizationHeader(accessToken) },
       method: 'DELETE'
     })
+    const body = await response.json()
 
-    expect(response.status).equals(204)
-    expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(0)
-    expect(await userBooksDao.collection.countDocuments({ libraries: libraryId })).equals(0)
+    expect(response.status).equals(403)
+    expect(body.errorCode).equals(ApiRestErrorCode.PermissionError)
+    expect(await librariesDao.collection.countDocuments({ _id: libraryId })).equals(1)
+    expect(await userBooksDao.collection.countDocuments({ _id: ownerUserBookId, libraries: libraryId })).equals(1)
   })
 })
 

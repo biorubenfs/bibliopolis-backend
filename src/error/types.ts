@@ -17,5 +17,6 @@ export enum ApiRestErrorCode {
   ImportWithoutValidIsbn = 'IMPORT WITHOUT VALID ISBN',
   ImportFileTooLarge = 'IMPORT FILE TOO LARGE',
   ImportAlreadyActive = 'IMPORT ALREADY ACTIVE',
-  TagLimitReached = 'TAG LIMIT REACHED'
+  TagLimitReached = 'TAG LIMIT REACHED',
+  CoverNotAvailable = 'COVER NOT AVAILABLE'
 }

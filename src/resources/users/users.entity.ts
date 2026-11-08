@@ -7,8 +7,6 @@ export class UserEntity extends Entity<EntityType.Users> {
   readonly password: string
   readonly role: Role
   readonly avatar: string
-  readonly validationCode?: string
-  readonly emailValidatedAt?: Date
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -19,8 +17,6 @@ export class UserEntity extends Entity<EntityType.Users> {
     this.password = data.password
     this.role = data.role
     this.avatar = data.avatar
-    this.validationCode = data.validationCode
-    this.emailValidatedAt = data.emailValidatedAt
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
   }
@@ -31,7 +27,6 @@ export class UserEntity extends Entity<EntityType.Users> {
       email: this.email,
       role: this.role,
       avatar: this.avatar,
-      emailValidatedAt: this.emailValidatedAt,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     }

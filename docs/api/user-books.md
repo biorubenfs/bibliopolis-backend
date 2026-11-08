@@ -1,6 +1,8 @@
 # API de User Books
 
-Un user book es el ejemplar de un libro que tiene un usuario. Se crea al añadir un libro a una biblioteca ([`POST /libraries/:id/books`](libraries.md#post-librariesidbooks)) y puede pertenecer a varias bibliotecas del mismo usuario. Guarda una copia de los datos del libro (título, autores, portada e ISBN) junto con la valoración y las notas del usuario.
+Un user book es el ejemplar de un libro que tiene un usuario. Se crea al añadir un libro a una biblioteca ([`POST /libraries/:id/books`](libraries.md#post-librariesidbooks)) y puede pertenecer a varias bibliotecas del mismo usuario. Guarda una copia de los datos del libro (título, autores, portada e ISBN) junto con la valoración y las notas del usuario. Cuando un administrador corrige un libro ([`PATCH /books/:id`](books.md#patch-booksid)), el título, los autores y la portada se actualizan en todos sus user books; su `updatedAt` no cambia.
+
+Todos los endpoints son solo para usuarios `regular`: un administrador recibe un `403` (`must be a regular user`).
 
 Atributos de un user book:
 
@@ -24,7 +26,6 @@ Atributos de un user book:
 Lista los user books. Admite [paginación](../index.md#paginacion), filtros por biblioteca y por usuario, y búsqueda de texto.
 
 - Un usuario normal solo puede listar sus propios user books de sus bibliotecas. Si no indica `libraryId`, se listan los de todas sus bibliotecas.
-- Un administrador puede listar los de cualquier usuario y biblioteca.
 
 Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo. Con `search` se ordenan por relevancia.
 

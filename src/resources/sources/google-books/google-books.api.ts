@@ -39,6 +39,12 @@ class GoogleBooksApi {
 
     return responseData.items.at(0) ?? null
   }
+
+  // The cover value is the volume id; null when the source has no book or no image for it
+  async fetchCoverByIsbn (isbn: string): Promise<string | null> {
+    const volume = await this.fetchBookByIsbn(isbn)
+    return volume?.volumeInfo.imageLinks != null ? volume.id : null
+  }
 }
 
 export default new GoogleBooksApi(config.googleBooks.domain, config.googleBooks.apiKey)

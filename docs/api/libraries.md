@@ -2,6 +2,8 @@
 
 Este documento describe los endpoints para la gestión de bibliotecas. Una biblioteca pertenece a un usuario y contiene una lista de [user books](user-books.md) (ejemplares de libros del usuario).
 
+Todos los endpoints son solo para usuarios `regular`: un administrador no tiene bibliotecas ni puede ver las de otros usuarios, y recibe un `403` (`must be a regular user`).
+
 Atributos de una biblioteca:
 
 | Campo         | Tipo     | Descripción                                    |
@@ -111,7 +113,7 @@ El usuario ya tiene una biblioteca con ese nombre (la comparación no distingue 
 
 ## GET /libraries/:id
 
-Obtiene una biblioteca. Solo el propietario o un administrador pueden consultarla.
+Obtiene una biblioteca. Solo el propietario puede consultarla.
 
 ### Respuestas
 
@@ -168,7 +170,7 @@ La biblioteca no existe.
 
 ## GET /libraries
 
-Lista las bibliotecas del usuario autenticado (o todas si es administrador): primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtros de favoritas y de etiquetas.
+Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtros de favoritas y de etiquetas.
 
 ### Query Params
 
@@ -239,7 +241,7 @@ Parámetros de paginación no válidos, `search` repetido o con más de 100 cara
 
 ## PATCH /libraries/:id
 
-Modifica el nombre, la descripción, la marca de favorita o las etiquetas de una biblioteca. Solo el propietario o un administrador pueden modificarla.
+Modifica el nombre, la descripción, la marca de favorita o las etiquetas de una biblioteca. Solo el propietario puede modificarla.
 
 ### Body
 
@@ -287,7 +289,7 @@ El usuario ya tiene otra biblioteca con ese nombre.
 
 ## DELETE /libraries/:id
 
-Elimina una biblioteca. Solo el propietario o un administrador pueden eliminarla.
+Elimina una biblioteca. Solo el propietario puede eliminarla.
 
 Los user books de la biblioteca **no se eliminan**: solo se quita la biblioteca de su lista `libraries`.
 
@@ -311,7 +313,7 @@ La biblioteca no existe.
 
 ## POST /libraries/:id/books
 
-Añade un libro a una biblioteca del usuario autenticado. Solo el propietario de la biblioteca puede añadir libros (tampoco un administrador puede hacerlo en bibliotecas ajenas).
+Añade un libro a una biblioteca del usuario autenticado. Solo el propietario de la biblioteca puede añadir libros.
 
 - Si el libro no existe en el catálogo ([`books`](books.md)), se crea con los datos enviados.
 - Si el usuario ya tiene un user book de ese libro (en otra biblioteca), se reutiliza y se añade esta biblioteca a su lista `libraries`; si no, se crea uno nuevo.
@@ -441,7 +443,7 @@ La biblioteca no existe o el user book no está en ella.
 
 ## Notas de implementación
 
-- Solo el propietario o un administrador pueden consultar, modificar o eliminar una biblioteca. Añadir y quitar libros está reservado al propietario.
+- Solo el propietario puede consultar, modificar o eliminar una biblioteca, y añadir o quitar libros. Los administradores no tienen acceso.
 - Los IDs de la lista `books` corresponden a [user books](user-books.md), no a libros del catálogo.
 - Para listar los libros de una biblioteca con todos sus datos se usa [`GET /user-books?libraryId=<id>`](user-books.md#get-user-books), y para exportarlos [`GET /user-books/download`](user-books.md#get-user-booksdownload).
 - Las etiquetas de `tagIds` se gestionan en [`/tags`](tags.md). Al borrar una etiqueta, se quita de todas las bibliotecas de su propietario.

@@ -33,6 +33,13 @@ class OpenLibraryApi {
     return book
   }
 
+  // The cover value is the first cover id; null when the source has no book or no cover for it
+  async fetchCoverByIsbn (isbn: string): Promise<string | null> {
+    const book = await this.fetchBookByIsbn(isbn)
+    const coverId = book?.covers?.at(0)
+    return coverId != null ? coverId.toString() : null
+  }
+
   async fetchWorkById (workKey: string): Promise<OpenLibraryWork | null> {
     try {
       const url = new URL(`${workKey}.json`, this.domain)

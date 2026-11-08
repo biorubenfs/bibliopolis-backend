@@ -1,10 +1,19 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { UserEntity } from './users.entity.js'
-import { CreateUser, DBUser, Role, UpdateUser } from './users.interfaces.js'
+import { CreateUser, DBUser, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
 import config from '../../config.js'
 import bcrypt from 'bcryptjs'
-import { isNotNull } from '../../utils.js'
+import { escapeRegExp, isNotNull } from '../../utils.js'
+import { Filter } from 'mongodb'
+
+function listUsersMongoFilter (filter: UsersListFilter): Filter<DBUser> {
+  if (filter.search == null || filter.search === '') return {}
+
+  // Case-insensitive substring match: user input is escaped so it is matched literally
+  const pattern = { $regex: escapeRegExp(filter.search), $options: 'i' }
+  return { $or: [{ name: pattern }, { email: pattern }] }
+}
 
 function dbUserToEntity (dbUser: DBUser | null): UserEntity | null {
   return dbUser == null ? null : new UserEntity(dbUser)
@@ -16,16 +25,19 @@ class UsersDao extends Dao<DBUser> {
   }
 
   async init (): Promise<void> {
+    await this.collection.createIndex({ email: 1 }, { unique: true })
+
     const now = new Date()
     const defaultAdmin = {
       name: config.defaultAdmin.name,
-      email: config.defaultAdmin.email,
+      email: config.defaultAdmin.email.trim().toLowerCase(),
       avatar: '',
       password: bcrypt.hashSync(config.defaultAdmin.password, config.hashRounds),
       createdAt: now,
       updatedAt: now
     }
-    const current = await this.collection.findOne({ name: defaultAdmin.name, email: defaultAdmin.email })
+    // By email only: it is unique, so a user with that email blocks the creation whatever its name
+    const current = await this.collection.findOne({ email: defaultAdmin.email })
     if (current != null) {
       return
     }
@@ -58,10 +70,12 @@ class UsersDao extends Dao<DBUser> {
     return new UserEntity(dbUser)
   }
 
-  async list (skip: number, limit: number): Promise<readonly UserEntity[]> {
+  async list (skip: number, limit: number, filter: UsersListFilter = {}): Promise<readonly UserEntity[]> {
     const dbUsers = await this.collection
-      .find()
+      .find(listUsersMongoFilter(filter))
       .project<DBUser>({ avatar: 0 })
+      // ULIDs sort by creation time: newest first
+      .sort({ _id: -1 })
       .skip(skip)
       .limit(limit)
       .toArray()
@@ -69,8 +83,8 @@ class UsersDao extends Dao<DBUser> {
     return dbUsers.map(dbUserToEntity).filter(isNotNull)
   }
 
-  async count (): Promise<number> {
-    const total = await this.collection.countDocuments()
+  async count (filter: UsersListFilter = {}): Promise<number> {
+    const total = await this.collection.countDocuments(listUsersMongoFilter(filter))
     return total
   }
 
@@ -102,15 +116,6 @@ class UsersDao extends Dao<DBUser> {
     )
 
     return dbUserToEntity(user)
-  }
-
-  async validate (id: string, validationCode: string): Promise<void> {
-    await this.collection.findOneAndUpdate(
-      { _id: id, validationCode },
-      {
-        $unset: { validationCode: true }
-      }
-    )
   }
 }
 

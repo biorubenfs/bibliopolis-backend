@@ -5,7 +5,6 @@ import { ClassifiedCsvRow, classifyRows, CsvColumn, CsvColumnSelection, CsvReadE
 import librariesService from '../libraries/libraries.service.js'
 import { LibraryEntity } from '../libraries/libraries.entity.js'
 import userBooksDao from '../user-books/user-books.dao.js'
-import { Role } from '../users/users.interfaces.js'
 import importItemsDao from './import-items.dao.js'
 import { ImportItemEntity } from './import-items.entity.js'
 import { ANALYSIS_SAMPLE_ROWS, MAX_FILE_NAME_LENGTH, MAX_IMPORT_ROWS } from './imports.constants.js'
@@ -76,7 +75,7 @@ function isPending (item: ImportItemEntity, isbnsInLibrary: ReadonlySet<string>)
 class ImportsService {
   /** Reads and classifies the file. Shared by both modes: the review has to match what is imported */
   private async analyze (file: ImportFile | undefined, request: ImportRequest, userId: string): Promise<ImportAnalysis> {
-    const library = (await librariesService.get(request.libraryId, userId, Role.Regular)).entity
+    const library = (await librariesService.get(request.libraryId, userId)).entity
 
     const csv = readFile(file)
 
@@ -155,7 +154,7 @@ class ImportsService {
   }
 
   async list (libraryId: string, userId: string, page: Page): Promise<CollectionResultObject<ImportEntity>> {
-    await librariesService.get(libraryId, userId, Role.Regular)
+    await librariesService.get(libraryId, userId)
 
     const [imports, total] = await Promise.all([
       importsDao.list(libraryId, page.skip, page.limit),

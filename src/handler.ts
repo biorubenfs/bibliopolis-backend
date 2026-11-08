@@ -31,7 +31,9 @@ function handler<TBody> (controller: CustomController<TBody>): RequestHandler<an
 
         case data instanceof SingleResultObject:
           res.status(status)
-            .json({ results: data.entity.toResult() })
+            .json(data.meta == null
+              ? { results: data.entity.toResult() }
+              : { results: data.entity.toResult(), meta: data.meta })
           return
 
         case data instanceof MiscResultObject:

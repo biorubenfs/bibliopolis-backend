@@ -5,6 +5,7 @@ import { DBUserBook, UpdateUserBook } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
 import { AggregationCursor, Document, WithId, ClientSession } from 'mongodb'
 import { BookEntity } from '../books/books.entity.js'
+import { BookSyncData } from '../books/books.interfaces.js'
 import config from '../../config.js'
 
 function dbUserBookToEntity (dbUserBook: DBUserBook | null): UserBookEntity | null {
@@ -183,6 +184,19 @@ class UserBooksDao extends Dao<DBUserBook> {
     const total = countResult.length > 0 ? countResult[0].total : 0
 
     return total
+  }
+
+  /**
+   * Copies the corrected data of a book to every user book of it. The ISBNs are not copied because they
+   * cannot change, and updatedAt is not touched: it reflects the changes of the reader.
+   */
+  async syncBookData (bookId: string, data: BookSyncData, session: ClientSession): Promise<number> {
+    const result = await this.collection.updateMany(
+      { bookId },
+      { $set: { bookTitle: data.title, bookAuthors: data.authors, bookCover: data.cover } },
+      { session }
+    )
+    return result.modifiedCount
   }
 
   async deleteAll (libraryId: string, userId: string, session?: ClientSession): Promise<void> {
