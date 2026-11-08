@@ -17,7 +17,7 @@ Atributos de una etiqueta:
 
 ## Colores
 
-`color` solo admite estas claves: `red`, `orange`, `yellow`, `lime`, `green`, `teal`, `cyan`, `blue`, `indigo`, `purple`, `pink` y `grey`. Cada cliente decide los tonos exactos de cada clave.
+`color` solo admite estas claves: `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `indigo`, `purple`, `pink` y `grey`. Cada cliente decide los tonos exactos de cada clave.
 
 ## Nombres
 
@@ -133,9 +133,9 @@ Body no válido: falta algún campo, el nombre no tiene entre 2 y 20 caracteres 
     {
       "received": "#ff0000",
       "code": "invalid_enum_value",
-      "options": ["red", "orange", "yellow", "lime", "green", "teal", "cyan", "blue", "indigo", "purple", "pink", "grey"],
+      "options": ["red", "orange", "yellow", "green", "teal", "blue", "indigo", "purple", "pink", "grey"],
       "path": ["color"],
-      "message": "Invalid enum value. Expected 'red' | 'orange' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink' | 'grey', received '#ff0000'"
+      "message": "Invalid enum value. Expected 'red' | 'orange' | 'yellow' | 'green' | 'teal' | 'blue' | 'indigo' | 'purple' | 'pink' | 'grey', received '#ff0000'"
     }
   ]
 }
