@@ -16,5 +16,6 @@ export enum ApiRestErrorCode {
   ImportWithoutIsbnColumn = 'IMPORT WITHOUT ISBN COLUMN',
   ImportWithoutValidIsbn = 'IMPORT WITHOUT VALID ISBN',
   ImportFileTooLarge = 'IMPORT FILE TOO LARGE',
-  ImportAlreadyActive = 'IMPORT ALREADY ACTIVE'
+  ImportAlreadyActive = 'IMPORT ALREADY ACTIVE',
+  TagLimitReached = 'TAG LIMIT REACHED'
 }

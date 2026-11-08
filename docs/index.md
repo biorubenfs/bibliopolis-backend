@@ -13,6 +13,7 @@ API REST de Bibliopolis para gestionar usuarios, sus bibliotecas personales y lo
 | [User Books](api/user-books.md)  | `/user-books` | Ejemplares de libros de un usuario (valoración, notas, exportación)      |
 | [External](api/external.md)      | `/external`   | Búsqueda de un libro por ISBN en el catálogo y en las fuentes externas   |
 | [Imports](api/imports.md)        | `/imports`    | Importación de libros a una biblioteca desde un fichero CSV              |
+| [Tags](api/tags.md)              | `/tags`       | Etiquetas para clasificar y filtrar las bibliotecas                      |
 
 Además, `GET /` es un endpoint público de estado:
 
@@ -126,8 +127,9 @@ Todos los errores tienen el mismo formato:
 | 403    | `PERMISSION ERROR`          | El usuario no tiene permisos sobre el recurso                     |
 | 404    | `NOT FOUND ERROR`           | El recurso no existe                                              |
 | 404    | `BOOKS API ERROR`           | El libro no se ha encontrado en ninguna fuente externa            |
-| 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca, …)       |
+| 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca o de etiqueta, …) |
 | 409    | `IMPORT ALREADY ACTIVE`     | El usuario ya tiene una importación en curso                      |
+| 409    | `TAG LIMIT REACHED`         | El usuario ya tiene el máximo de etiquetas personales             |
 | 413    | `IMPORT FILE TOO LARGE`     | El fichero de una importación supera el límite de tamaño          |
 | 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos                             |
 | 500    | `INTERNAL SERVER ERROR`     | Error inesperado del servidor                                     |

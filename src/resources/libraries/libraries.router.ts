@@ -2,7 +2,7 @@ import { Router } from 'express'
 import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
 
-import { addBookToLibrarySchema, librariesQuerySchema, newLibrarySchema } from './libraries.schemas.js'
+import { addBookToLibrarySchema, librariesQuerySchema, newLibrarySchema, updateLibrarySchema } from './libraries.schemas.js'
 import librariesService from './libraries.service.js'
 import { Role } from '../users/users.interfaces.js'
 import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
@@ -24,8 +24,8 @@ librariesRouter.get('/:id', handler(async (req) => {
 
 librariesRouter.get('/', queryParamsValidator(librariesQuerySchema), queryPaginationValidator, handler(async (req) => {
   // already validated by queryParamsValidator, parsed again to apply the trim
-  const { search } = librariesQuerySchema.parse(req.query)
-  const result = await librariesService.list(req.userId ?? '', req.role ?? Role.Regular, parseSkipLimitQP(req), search)
+  const { search, favorites, tags } = librariesQuerySchema.parse(req.query)
+  const result = await librariesService.list(req.userId ?? '', req.role ?? Role.Regular, parseSkipLimitQP(req), { search, favorites, tagIds: tags })
   return { status: HttpStatusCode.OK, data: result }
 }))
 
@@ -44,7 +44,7 @@ librariesRouter.delete('/:libraryId/books/:userBookId', handler(async (req) => {
   return { status: HttpStatusCode.NoContent, data: result }
 }))
 
-librariesRouter.patch('/:id', bodyValidator(newLibrarySchema.partial()), handler(async (req) => {
+librariesRouter.patch('/:id', bodyValidator(updateLibrarySchema), handler(async (req) => {
   const result = await librariesService.update(req.params.id, req.body, req.userId ?? '', req.role ?? Role.Regular)
   return { status: HttpStatusCode.OK, data: result }
 }))

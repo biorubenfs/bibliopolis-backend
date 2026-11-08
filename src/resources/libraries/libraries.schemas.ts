@@ -1,14 +1,34 @@
 import { z } from 'zod'
 import { BooksSource } from '../sources/sources.types.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
+import { MAX_TAGS_PER_LIBRARY } from '../tags/tags.constants.js'
+
+const tagIdsSchema = z.array(z.string().ulid())
+  .max(MAX_TAGS_PER_LIBRARY)
+  .refine(ids => new Set(ids).size === ids.length, { message: 'tagIds must not contain duplicates' })
 
 export const newLibrarySchema = z.object({
   name: z.string().trim().min(3).max(50),
-  description: z.string().trim().max(100)
+  description: z.string().trim().max(100),
+  // Optional and without a default: a default would also apply to PATCH bodies derived with
+  // partial(), and editing only the name would remove the tags
+  tagIds: tagIdsSchema.optional()
+})
+
+// isFavorite is only changed through PATCH: a new library is never a favorite
+export const updateLibrarySchema = newLibrarySchema.partial().extend({
+  isFavorite: z.boolean().optional()
 })
 
 export const librariesQuerySchema = z.object({
-  search: z.string().trim().max(100).optional()
+  search: z.string().trim().max(100).optional(),
+  // Only "true" is accepted: "false" would be ambiguous (non-favorites or no filter)
+  favorites: z.literal('true').transform(() => true).optional(),
+  // Comma-separated tag IDs; the libraries must have all of them
+  tags: z.string()
+    .transform(value => value.split(',').map(id => id.trim()).filter(id => id !== ''))
+    .pipe(z.array(z.string().ulid()).max(MAX_TAGS_PER_LIBRARY))
+    .optional()
 })
 
 export const addBookToLibrarySchema = z.object({

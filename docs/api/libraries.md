@@ -10,6 +10,8 @@ Atributos de una biblioteca:
 | `description` | string   | Descripción de la biblioteca                   |
 | `userId`      | string   | ID del usuario propietario                     |
 | `books`       | string[] | IDs de los user books que contiene             |
+| `isFavorite`  | boolean  | Si el usuario la ha marcado como favorita      |
+| `tagIds`      | string[] | IDs de sus [etiquetas](tags.md), hasta 5       |
 | `createdAt`   | date     | Fecha de creación                              |
 | `updatedAt`   | date     | Fecha de la última modificación                |
 
@@ -22,16 +24,20 @@ Crea una nueva biblioteca para el usuario autenticado.
 ```json
 {
   "name": "Nombre de la biblioteca",
-  "description": "Descripción de la biblioteca"
+  "description": "Descripción de la biblioteca",
+  "tagIds": ["01JZTAG0000000000000000001"]
 }
 ```
 
-| Campo         | Tipo   | Requerido | Descripción                                        |
-| ------------- | ------ | --------- | -------------------------------------------------- |
-| `name`        | string | Sí        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
-| `description` | string | Sí        | Descripción de la biblioteca (máx. 100 caracteres) |
+| Campo         | Tipo     | Requerido | Descripción                                        |
+| ------------- | -------- | --------- | -------------------------------------------------- |
+| `name`        | string   | Sí        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
+| `description` | string   | Sí        | Descripción de la biblioteca (máx. 100 caracteres) |
+| `tagIds`      | string[] | No        | IDs de etiquetas del usuario o globales: hasta 5, sin repetir. Si no se envía, la biblioteca se crea sin etiquetas |
 
 Se eliminan los espacios al principio y al final de ambos campos.
+
+Una biblioteca nueva nunca es favorita: `isFavorite` se ignora si se envía y solo se cambia con [`PATCH /libraries/:id`](#patch-librariesid).
 
 ### Respuestas
 
@@ -49,6 +55,8 @@ Biblioteca creada correctamente.
       "description": "description of the sample first library",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": [],
+      "isFavorite": false,
+      "tagIds": [],
       "createdAt": "2024-10-10T22:30:16.908Z",
       "updatedAt": "2024-10-10T22:30:16.908Z"
     }
@@ -72,6 +80,18 @@ Biblioteca creada correctamente.
       "message": "Required"
     }
   ]
+}
+```
+
+#### 404 Not Found
+
+Alguna de las etiquetas de `tagIds` no existe o es de otro usuario.
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "tag not found"
 }
 ```
 
@@ -111,6 +131,8 @@ Obtiene una biblioteca. Solo el propietario o un administrador pueden consultarl
         "01J9W9PGE06ANTMG3Y24KGCAFF",
         "01J9WA3W9TE5NG1H21PTK9VS4Q"
       ],
+      "isFavorite": false,
+      "tagIds": [],
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -146,11 +168,13 @@ La biblioteca no existe.
 
 ## GET /libraries
 
-Lista las bibliotecas del usuario autenticado (o todas si es administrador), ordenadas por fecha de creación. Admite [paginación](../index.md#paginacion) y búsqueda de texto.
+Lista las bibliotecas del usuario autenticado (o todas si es administrador): primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtros de favoritas y de etiquetas.
 
 ### Query Params
 
 - `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre o descripción contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No distingue mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
+- `favorites`: `true` (opcional) — Devuelve solo las favoritas. No admite otro valor: para no filtrar, se omite. Se combina con `search`, y el `total` de `paginationInfo` cuenta solo las que coinciden
+- `tags`: string (opcional) — IDs de etiquetas separados por comas, hasta 5 (`tags=<id1>,<id2>`). Devuelve las bibliotecas que tienen **todas** esas etiquetas. Se combina con `search` y `favorites`; un valor vacío se ignora, y un ID inexistente o de otro usuario da 0 resultados
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -173,6 +197,8 @@ Lista las bibliotecas del usuario autenticado (o todas si es administrador), ord
           "01J9W9PGE06ANTMG3Y24KGCAFF",
           "01J9WA3W9TE5NG1H21PTK9VS4Q"
         ],
+        "isFavorite": false,
+        "tagIds": [],
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
       }
@@ -188,7 +214,7 @@ Lista las bibliotecas del usuario autenticado (o todas si es administrador), ord
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres.
+Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres, `favorites` con un valor distinto de `true`, o `tags` repetido, con más de 5 IDs o con un ID mal formado.
 
 ```json
 {
@@ -213,7 +239,7 @@ Parámetros de paginación no válidos, `search` repetido o con más de 100 cara
 
 ## PATCH /libraries/:id
 
-Modifica el nombre y/o la descripción de una biblioteca. Solo el propietario o un administrador pueden modificarla.
+Modifica el nombre, la descripción, la marca de favorita o las etiquetas de una biblioteca. Solo el propietario o un administrador pueden modificarla.
 
 ### Body
 
@@ -222,14 +248,18 @@ Todos los campos son opcionales; solo se modifican los que se envían.
 ```json
 {
   "name": "Nuevo nombre",
-  "description": "Nueva descripción"
+  "description": "Nueva descripción",
+  "isFavorite": true,
+  "tagIds": ["01JZTAG0000000000000000001", "01JZTAG0000000000000000004"]
 }
 ```
 
-| Campo         | Tipo   | Requerido | Descripción                                        |
-| ------------- | ------ | --------- | -------------------------------------------------- |
-| `name`        | string | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
-| `description` | string | No        | Descripción de la biblioteca (máx. 100 caracteres) |
+| Campo         | Tipo     | Requerido | Descripción                                        |
+| ------------- | -------- | --------- | -------------------------------------------------- |
+| `name`        | string   | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
+| `description` | string   | No        | Descripción de la biblioteca (máx. 100 caracteres) |
+| `isFavorite`  | boolean  | No        | Marca (`true`) o desmarca (`false`) la biblioteca como favorita |
+| `tagIds`      | string[] | No        | **Sustituye** todas las etiquetas de la biblioteca (`[]` las quita). Hasta 5, sin repetir, del propietario de la biblioteca o globales |
 
 ### Respuestas
 
@@ -247,7 +277,7 @@ La biblioteca pertenece a otro usuario.
 
 #### 404 Not Found
 
-La biblioteca no existe.
+La biblioteca no existe (`library not found`), o alguna de las etiquetas de `tagIds` no existe o es de otro usuario (`tag not found`).
 
 #### 409 Conflict
 
@@ -331,6 +361,8 @@ Devuelve la biblioteca actualizada, con el ID del user book añadido a `books`.
       "description": "description of the sample first library",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": ["01J9W9P6M5S0VRKVSRX3Q9T3W7"],
+      "isFavorite": false,
+      "tagIds": [],
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -412,3 +444,4 @@ La biblioteca no existe o el user book no está en ella.
 - Solo el propietario o un administrador pueden consultar, modificar o eliminar una biblioteca. Añadir y quitar libros está reservado al propietario.
 - Los IDs de la lista `books` corresponden a [user books](user-books.md), no a libros del catálogo.
 - Para listar los libros de una biblioteca con todos sus datos se usa [`GET /user-books?libraryId=<id>`](user-books.md#get-user-books), y para exportarlos [`GET /user-books/download`](user-books.md#get-user-booksdownload).
+- Las etiquetas de `tagIds` se gestionan en [`/tags`](tags.md). Al borrar una etiqueta, se quita de todas las bibliotecas de su propietario.

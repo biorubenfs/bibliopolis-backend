@@ -8,6 +8,7 @@ import booksDao from './resources/books/books.dao.js'
 import userBooksDao from './resources/user-books/user-books.dao.js'
 import importsDao from './resources/imports/imports.dao.js'
 import importItemsDao from './resources/imports/import-items.dao.js'
+import tagsDao from './resources/tags/tags.dao.js'
 import importsWorker from './resources/imports/imports.worker.js'
 
 export default class App {
@@ -34,6 +35,7 @@ export default class App {
     await librariesDao.init()
     await importsDao.init()
     await importItemsDao.init()
+    await tagsDao.init()
 
     startCronTasks()
     await importsWorker.start()

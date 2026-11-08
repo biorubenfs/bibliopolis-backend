@@ -9,10 +9,12 @@ import booksService from '../books/books.service.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import { UserBookNotFoundError } from '../user-books/user-books.error.js'
 import { Role } from '../users/users.interfaces.js'
+import tagsDao from '../tags/tags.dao.js'
+import { TagNotFoundError } from '../tags/tags.error.js'
 import librariesDao from './libraries.dao.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { BookAlreadyExistingInLibrary, BookNotFoundInLibraryError, LibraryNameConflictError, LibraryNotFoundError, LibraryPermissionsError } from './libraries.error.js'
-import { NewLibrary } from './libraries.interfaces.js'
+import { LibrariesListFilter, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 
 class LibrariesService {
   private async checkLibraryNameAvailable (libraryName: string, userId: string, excludeLibraryId?: string): Promise<void> {
@@ -23,8 +25,17 @@ class LibrariesService {
     }
   }
 
+  /** The tags of a library must be of its owner or global; other users' tags do not exist for them. */
+  private async checkTagsUsable (tagIds: readonly string[], ownerId: string): Promise<void> {
+    if (tagIds.length === 0) return
+    if (await tagsDao.countUsable(tagIds, ownerId) !== tagIds.length) {
+      throw new TagNotFoundError('tag not found')
+    }
+  }
+
   async create (body: NewLibrary, userId: string): Promise<SingleResultObject<LibraryEntity>> {
     await this.checkLibraryNameAvailable(body.name, userId)
+    await this.checkTagsUsable(body.tagIds ?? [], userId)
     const newLibraryData = {
       ...body,
       name: body.name.trim()
@@ -33,7 +44,7 @@ class LibrariesService {
     return new SingleResultObject(newLibrary)
   }
 
-  async update (id: string, body: Partial<NewLibrary>, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
+  async update (id: string, body: UpdateLibrary, userId: string, role: Role): Promise<SingleResultObject<LibraryEntity>> {
     const library = await this.get(id, userId, role)
     if (body.name != null) {
       await this.checkLibraryNameAvailable(body.name, userId, id)
@@ -41,6 +52,10 @@ class LibrariesService {
 
     if (library == null) {
       throw new LibraryNotFoundError('library not found')
+    }
+    if (body.tagIds != null) {
+      // Checked against the owner, not the requester: an admin may edit another user's library
+      await this.checkTagsUsable(body.tagIds, library.entity.userId)
     }
 
     const updatedLibrary = await librariesDao.update(id, body)
@@ -78,10 +93,10 @@ class LibrariesService {
     })
   }
 
-  async list (userId: string, role: Role, page: Page, search?: string): Promise<CollectionResultObject<LibraryEntity>> {
+  async list (userId: string, role: Role, page: Page, filter: LibrariesListFilter = {}): Promise<CollectionResultObject<LibraryEntity>> {
     const [libraries, total] = await Promise.all([
-      await librariesDao.list(userId, role, page.skip, page.limit, search),
-      await librariesDao.count(userId, role, search)
+      await librariesDao.list(userId, role, page.skip, page.limit, filter),
+      await librariesDao.count(userId, role, filter)
     ])
 
     const mockPaginationObject = { ...page, total }

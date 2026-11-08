@@ -1,0 +1,38 @@
+[
+  {
+    "_id": "01JZTAG0000000000000000001",
+    "name": "Novela",
+    "normalizedName": "novela",
+    "color": "green",
+    "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+    "createdAt": "2000-01-01T00:00:00.000Z",
+    "updatedAt": "2000-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "01JZTAG0000000000000000002",
+    "name": "Prestados",
+    "normalizedName": "prestados",
+    "color": "blue",
+    "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+    "createdAt": "2000-01-01T00:00:00.000Z",
+    "updatedAt": "2000-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "01JZTAG0000000000000000003",
+    "name": "Ensayo",
+    "normalizedName": "ensayo",
+    "color": "orange",
+    "userId": "01J9XDBGCX8QM0GW67T7QGKS41",
+    "createdAt": "2000-01-01T00:00:00.000Z",
+    "updatedAt": "2000-01-01T00:00:00.000Z"
+  },
+  {
+    "_id": "01JZTAG0000000000000000004",
+    "name": "Clásicos",
+    "normalizedName": "clásicos",
+    "color": "purple",
+    "userId": null,
+    "createdAt": "2000-01-01T00:00:00.000Z",
+    "updatedAt": "2000-01-01T00:00:00.000Z"
+  }
+]
