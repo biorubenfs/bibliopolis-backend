@@ -15,10 +15,11 @@ function escapeRegExp (value: string): string {
 }
 
 function listLibrariesMongoFilter (userId: string, role: Role, filter: LibrariesListFilter): Filter<DBLibrary> {
-  const { search, favorites } = filter
+  const { search, favorites, tagIds } = filter
   const mongoFilter: Filter<DBLibrary> = {
     ...(role === Role.Regular ? { userId } : {}),
-    ...(favorites === true ? { isFavorite: true } : {})
+    ...(favorites === true ? { isFavorite: true } : {}),
+    ...(tagIds != null && tagIds.length > 0 ? { tagIds: { $all: [...tagIds] } } : {})
   }
 
   if (search != null && search !== '') {
@@ -39,15 +40,18 @@ class LibrariesDao extends Dao<DBLibrary> {
     await this.collection.createIndex({ userId: 1 })
     // Same order as list(): favorites first, then by id
     await this.collection.createIndex({ userId: 1, isFavorite: -1, _id: 1 })
+    await this.collection.createIndex({ userId: 1, tagIds: 1 })
   }
 
   async create (newLibrary: NewLibrary, userId: string): Promise<LibraryEntity> {
     const now = new Date()
     const dbLibrary: DBLibrary = {
-      ...newLibrary,
+      name: newLibrary.name,
+      description: newLibrary.description,
       _id: ulid(),
       books: [],
       isFavorite: false,
+      tagIds: newLibrary.tagIds ?? [],
       userId,
       createdAt: now,
       updatedAt: now
@@ -103,6 +107,11 @@ class LibrariesDao extends Dao<DBLibrary> {
     const mongoFilter = listLibrariesMongoFilter(userId, role, filter)
     const total = await this.collection.countDocuments(mongoFilter)
     return total
+  }
+
+  /** Removes a deleted tag from the libraries of the user. */
+  async removeTagFromLibraries (tagId: string, userId: string, session?: ClientSession): Promise<void> {
+    await this.collection.updateMany({ userId, tagIds: tagId }, { $pull: { tagIds: tagId } }, { session })
   }
 
   async addBookIdToLibrary (libraryId: string, bookId: string, session?: ClientSession): Promise<LibraryEntity | null> {

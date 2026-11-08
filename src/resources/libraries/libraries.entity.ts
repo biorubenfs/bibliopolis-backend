@@ -7,6 +7,7 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
   readonly userId: string
   readonly books: string[]
   readonly isFavorite: boolean
+  readonly tagIds: string[]
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -17,6 +18,7 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
     this.userId = data.userId
     this.books = data.books
     this.isFavorite = data.isFavorite
+    this.tagIds = data.tagIds
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
   }
@@ -28,6 +30,7 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
       userId: this.userId,
       books: this.books,
       isFavorite: this.isFavorite,
+      tagIds: this.tagIds,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     }

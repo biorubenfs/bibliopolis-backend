@@ -13,3 +13,4 @@ nav:
       - User Books: api/user-books.md
       - External: api/external.md
       - Imports: api/imports.md
+      - Tags: api/tags.md

@@ -3,6 +3,7 @@ import booksDao from './resources/books/books.dao.js'
 import userBooksDao from './resources/user-books/user-books.dao.js'
 import librariesDao from './resources/libraries/libraries.dao.js'
 import usersDao from './resources/users/users.dao.js'
+import tagsDao from './resources/tags/tags.dao.js'
 import { readFileSync } from 'fs'
 import path from 'path'
 import { neverReached } from './utils.js'
@@ -11,7 +12,8 @@ export enum MockDataSet {
   Books = 'books',
   Libraries = 'libraries',
   Users = 'users',
-  UserBooks = 'user-books'
+  UserBooks = 'user-books',
+  Tags = 'tags'
 }
 
 export enum DataSetType {
@@ -41,6 +43,11 @@ export function getMockDataSetParams (data: MockDataSet): { filename: string, co
       return {
         filename,
         collection: userBooksDao.collection
+      }
+    case MockDataSet.Tags:
+      return {
+        filename,
+        collection: tagsDao.collection
       }
     default: {
       neverReached(data)

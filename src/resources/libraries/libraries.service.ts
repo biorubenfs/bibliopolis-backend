@@ -9,6 +9,8 @@ import booksService from '../books/books.service.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import { UserBookNotFoundError } from '../user-books/user-books.error.js'
 import { Role } from '../users/users.interfaces.js'
+import tagsDao from '../tags/tags.dao.js'
+import { TagNotFoundError } from '../tags/tags.error.js'
 import librariesDao from './libraries.dao.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { BookAlreadyExistingInLibrary, BookNotFoundInLibraryError, LibraryNameConflictError, LibraryNotFoundError, LibraryPermissionsError } from './libraries.error.js'
@@ -23,8 +25,17 @@ class LibrariesService {
     }
   }
 
+  /** The tags of a library must be of its owner or global; other users' tags do not exist for them. */
+  private async checkTagsUsable (tagIds: readonly string[], ownerId: string): Promise<void> {
+    if (tagIds.length === 0) return
+    if (await tagsDao.countUsable(tagIds, ownerId) !== tagIds.length) {
+      throw new TagNotFoundError('tag not found')
+    }
+  }
+
   async create (body: NewLibrary, userId: string): Promise<SingleResultObject<LibraryEntity>> {
     await this.checkLibraryNameAvailable(body.name, userId)
+    await this.checkTagsUsable(body.tagIds ?? [], userId)
     const newLibraryData = {
       ...body,
       name: body.name.trim()
@@ -41,6 +52,10 @@ class LibrariesService {
 
     if (library == null) {
       throw new LibraryNotFoundError('library not found')
+    }
+    if (body.tagIds != null) {
+      // Checked against the owner, not the requester: an admin may edit another user's library
+      await this.checkTagsUsable(body.tagIds, library.entity.userId)
     }
 
     const updatedLibrary = await librariesDao.update(id, body)

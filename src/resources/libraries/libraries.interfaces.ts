@@ -8,6 +8,7 @@ export type UpdateLibrary = z.infer<typeof updateLibrarySchema>
 export interface LibrariesListFilter {
   search?: string
   favorites?: boolean
+  tagIds?: readonly string[]
 }
 
 export type DBLibrary = Omit<LibraryEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
