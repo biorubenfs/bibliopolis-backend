@@ -37,11 +37,11 @@ export default {
   hashRounds: parseNumber(process.env.HASH_ROUNDS, 10),
   openLibrary: {
     domain: parseUrl(process.env.OPEN_LIBRARY_DOMAIN, 'https://openlibrary.org'),
-    coverUrlPattern: parseString(process.env.OPEN_LIBRARY_COVER_URL_PATTERN)
+    coverUrlPattern: parseString(process.env.OPEN_LIBRARY_COVER_URL_PATTERN, 'https://covers.openlibrary.org/b/id/:id-:size.jpg')
   },
   googleBooks: {
     domain: parseUrl(process.env.GOOGLE_BOOKS_DOMAIN, 'https://www.googleapis.com'),
-    coverUrlPattern: parseString(process.env.GOOGLE_BOOKS_COVER_URL_PATTERN),
+    coverUrlPattern: parseString(process.env.GOOGLE_BOOKS_COVER_URL_PATTERN, 'http://books.google.com/books/content?id=:id&printsec=frontcover&img=1&zoom=:size'),
     apiKey: parseString(process.env.GOOGLE_BOOKS_API_KEY)
   },
   roboHashApi: {
