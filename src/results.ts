@@ -4,9 +4,12 @@ import { PaginationObject } from './types.js'
 
 export class SingleResultObject<T extends Entity<EntityType>> {
   readonly entity: T
+  // Data that goes along with the entity but is not one of its attributes (e.g. a generated password)
+  readonly meta: object | null
 
-  constructor (entity: T) {
+  constructor (entity: T, meta: object | null = null) {
     this.entity = entity
+    this.meta = meta
   }
 }
 

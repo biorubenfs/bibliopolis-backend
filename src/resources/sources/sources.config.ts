@@ -6,11 +6,13 @@ import { ApiSourcesConfig, BooksSource } from './sources.types.js'
 export const apiSources: readonly ApiSourcesConfig[] = [
   {
     name: BooksSource.GOOGLE_BOOKS,
-    fetch: googleBooksApi.fetchBookByIsbn.bind(googleBooksApi)
+    fetch: googleBooksApi.fetchBookByIsbn.bind(googleBooksApi),
+    fetchCover: googleBooksApi.fetchCoverByIsbn.bind(googleBooksApi)
   },
   {
     name: BooksSource.OPEN_LIBRARY,
-    fetch: openLibraryApi.fetchBookByIsbn.bind(openLibraryApi)
+    fetch: openLibraryApi.fetchBookByIsbn.bind(openLibraryApi),
+    fetchCover: openLibraryApi.fetchCoverByIsbn.bind(openLibraryApi)
   }
   // Add more sources here in order of priority
 ]

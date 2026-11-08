@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import jwt, { JwtPayload } from 'jsonwebtoken'
 import config from '../config.js'
 import { Role } from '../resources/users/users.interfaces.js'
-import { ExpiredTokenError, InvalidTokenError, TokenNotProvidedError } from '../error/errors.js'
+import { ExpiredTokenError, ForbiddenError, InvalidTokenError, TokenNotProvidedError } from '../error/errors.js'
 
 // export function checkJwt (req: Request, res: Response, next: NextFunction): void {
 //   const header = req.header('Authorization')
@@ -67,7 +67,15 @@ function assertPayload (payload: JwtPayload): void {
 
 export function checkAdmin (req: Request, res: Response, next: NextFunction): void {
   if (req.role !== Role.Admin) {
-    return next(new InvalidTokenError('must be admin'))
+    return next(new ForbiddenError('must be admin'))
+  }
+  next()
+}
+
+// Admins manage the catalog and the users from the backoffice: they have no libraries of their own
+export function checkRegular (req: Request, res: Response, next: NextFunction): void {
+  if (req.role !== Role.Regular) {
+    return next(new ForbiddenError('must be a regular user'))
   }
   next()
 }

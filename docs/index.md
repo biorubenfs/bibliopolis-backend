@@ -36,6 +36,7 @@ Authorization: Bearer <accessToken>
 - Solo hay un token (no hay refresh token). Su caducidad es configurable en el servidor (7 días por defecto).
 - No hay logout en el servidor: el cliente descarta el token, que sigue siendo válido hasta que caduca.
 - El token contiene el ID del usuario y su rol (`regular` o `admin`). Algunos endpoints solo están disponibles para administradores.
+- Un administrador gestiona el catálogo y los usuarios; no tiene bibliotecas. Las rutas `/libraries`, `/user-books`, `/imports` y `/tags` responden `403` a un administrador.
 
 Errores de autenticación (`401 Unauthorized`):
 
@@ -44,7 +45,13 @@ Errores de autenticación (`401 Unauthorized`):
 | `TOKEN NOT PROVIDED ERROR` | `token not provided`  | No se ha enviado la cabecera `Authorization`           |
 | `INVALID TOKEN ERROR`      | `invalid token`       | Token mal formado o firma no válida                    |
 | `INVALID TOKEN ERROR`      | `token expired`       | El token ha caducado                                   |
-| `INVALID TOKEN ERROR`      | `must be admin`       | El endpoint requiere rol `admin`                       |
+
+Errores de permisos por rol (`403 Forbidden`):
+
+| `errorCode`        | `message`                | Causa                                                                  |
+| ------------------ | ------------------------ | ---------------------------------------------------------------------- |
+| `PERMISSION ERROR` | `must be admin`          | El endpoint requiere rol `admin`                                       |
+| `PERMISSION ERROR` | `must be a regular user` | El endpoint es solo para usuarios normales (`/libraries`, `/user-books`, `/imports`, `/tags`) |
 
 ## Formato de las respuestas
 
@@ -59,6 +66,8 @@ Recurso único:
   }
 }
 ```
+
+Algunas respuestas añaden junto a `results` un objeto `meta` con datos que no son atributos del recurso, como la contraseña generada en [`POST /users`](api/users.md#post-users).
 
 Colección (con información de paginación):
 
@@ -122,14 +131,15 @@ Todos los errores tienen el mismo formato:
 | 400    | `IMPORT WITHOUT ISBN COLUMN` | El fichero de una importación no tiene columna de ISBN           |
 | 400    | `IMPORT WITHOUT VALID ISBN` | El fichero de una importación no tiene ninguna fila válida        |
 | 401    | `TOKEN NOT PROVIDED ERROR`  | Falta el token                                                    |
-| 401    | `INVALID TOKEN ERROR`       | Token no válido o caducado, o se requiere rol `admin`             |
+| 401    | `INVALID TOKEN ERROR`       | Token no válido o caducado                                        |
 | 403    | `INVALID CREDENTIALS ERROR` | Email o contraseña incorrectos en el login                        |
-| 403    | `PERMISSION ERROR`          | El usuario no tiene permisos sobre el recurso                     |
+| 403    | `PERMISSION ERROR`          | El usuario no tiene permisos sobre el recurso, o su rol no le da acceso al endpoint |
 | 404    | `NOT FOUND ERROR`           | El recurso no existe                                              |
 | 404    | `BOOKS API ERROR`           | El libro no se ha encontrado en ninguna fuente externa            |
 | 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca o de etiqueta, …) |
 | 409    | `IMPORT ALREADY ACTIVE`     | El usuario ya tiene una importación en curso                      |
 | 409    | `TAG LIMIT REACHED`         | El usuario ya tiene el máximo de etiquetas personales             |
+| 422    | `COVER NOT AVAILABLE`       | La fuente elegida no tiene portada para el libro                  |
 | 413    | `IMPORT FILE TOO LARGE`     | El fichero de una importación supera el límite de tamaño          |
 | 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos                             |
 | 500    | `INTERNAL SERVER ERROR`     | Error inesperado del servidor                                     |

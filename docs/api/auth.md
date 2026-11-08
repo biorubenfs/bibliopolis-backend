@@ -19,7 +19,7 @@ Autentica a un usuario verificando sus credenciales. Si son correctas, devuelve 
 
 | Campo      | Tipo   | Requerido | Descripción                  |
 | ---------- | ------ | --------- | ---------------------------- |
-| `email`    | string | Sí        | Email del usuario registrado |
+| `email`    | string | Sí        | Email del usuario registrado. No distingue mayúsculas |
 | `password` | string | Sí        | Contraseña del usuario       |
 
 ### Respuestas

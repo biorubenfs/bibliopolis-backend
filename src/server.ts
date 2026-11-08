@@ -5,7 +5,7 @@ import errorHandler from './error/error-handler.js'
 import authRouter from './resources/auth/auth.router.js'
 import booksRouter from './resources/books/books.router.js'
 import librariesRouter from './resources/libraries/libraries.router.js'
-import { checkJwt } from './middlewares/jwt.middleware.js'
+import { checkJwt, checkRegular } from './middlewares/jwt.middleware.js'
 import logger from './logger.js'
 import config from './config.js'
 import cors from 'cors'
@@ -63,11 +63,11 @@ export default class Server {
     // Protected routers
     this.express.use('/users', usersRouter)
     this.express.use('/books', booksRouter)
-    this.express.use('/libraries', librariesRouter)
-    this.express.use('/user-books', userBooksRouter)
+    this.express.use('/libraries', checkRegular, librariesRouter)
+    this.express.use('/user-books', checkRegular, userBooksRouter)
     this.express.use('/external', externalRouter)
-    this.express.use('/imports', importsRouter)
-    this.express.use('/tags', tagsRouter)
+    this.express.use('/imports', checkRegular, importsRouter)
+    this.express.use('/tags', checkRegular, tagsRouter)
 
     // error handling
     this.express.use(errorHandler)

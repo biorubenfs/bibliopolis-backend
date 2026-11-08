@@ -9,4 +9,6 @@ export enum BooksSource {
 export interface ApiSourcesConfig {
   name: BooksSource
   fetch: (isbn: string) => Promise<OpenLibraryBook | GoogleBooksVolume | null>
+  // Resolves to the cover value of the book, or null if the source has no cover for it; any failure rejects
+  fetchCover: (isbn: string) => Promise<string | null>
 }

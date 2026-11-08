@@ -18,3 +18,9 @@ export class InvalidCurrentPassword extends ApiError {
     super(ApiRestErrorCode.InvalidPassword, 400, message)
   }
 }
+
+export class UserPasswordResetForbiddenError extends ApiError {
+  constructor (message: string) {
+    super(ApiRestErrorCode.PermissionError, 403, message)
+  }
+}

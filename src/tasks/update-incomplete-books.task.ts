@@ -3,15 +3,9 @@ import booksDao from '../resources/books/books.dao.js'
 import userBooksDao from '../resources/user-books/user-books.dao.js'
 import { getBookFromSourcesApis } from '../utils.js'
 import { DBBook } from '../resources/books/books.interfaces.js'
-import { BookCover } from '../types.js'
 import logger from '../logger.js'
 import { BooksApiError } from '../error/errors.js'
-
-interface UpdatedBookData {
-  bookId: string
-  authors: readonly string[]
-  cover: BookCover
-}
+import { runInTransaction } from '../transaction-helper.js'
 
 export async function syncBooksFromSources (): Promise<void> {
   const booksWithMissingDataCursor = booksDao.collection.find({
@@ -21,12 +15,12 @@ export async function syncBooksFromSources (): Promise<void> {
     ]
   })
 
-  const updatedBooks = await updateBooksData(booksWithMissingDataCursor)
-  await updateUserBooksData(updatedBooks)
+  await updateBooksData(booksWithMissingDataCursor)
 }
 
-async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promise<UpdatedBookData[]> {
-  const updatedBooks: UpdatedBookData[] = []
+async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promise<void> {
+  let updated = 0
+  let userBooksModified = 0
   let total = 0
   let skipped = 0
   let failed = 0
@@ -58,24 +52,17 @@ async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promis
         const authors = hasNewAuthors ? bookData.authors : book.authors
         const cover = hasNewCover ? bookData.cover : book.cover
 
-        await booksDao.collection.updateOne(
-          { _id: book._id },
-          {
-            $set: {
-              authors,
-              cover,
-              updatedAt: new Date()
-            }
-          }
-        )
+        // The same propagation as a correction from the backoffice: the book and its user books change together
+        const { modifiedCount } = await runInTransaction(async (session) => {
+          const updatedBook = await booksDao.update(book._id, { authors, cover }, session)
+          if (updatedBook == null) throw new Error(`book ${book._id} not found`)
+          // Wrapped in an object: runInTransaction treats a null or undefined result as an aborted transaction
+          return { modifiedCount: await userBooksDao.syncBookData(book._id, { title: updatedBook.title, authors: updatedBook.authors, cover: updatedBook.cover }, session) }
+        })
+        userBooksModified += modifiedCount
+        updated++
 
         logger.info(`[ UPDATE BOOKS TASK ] book updated, bookId: ${book._id}, isbn: ${isbn}, newAuthors: ${String(hasNewAuthors)}, newCover: ${String(hasNewCover)}`)
-
-        updatedBooks.push({
-          bookId: book._id,
-          authors,
-          cover
-        })
       } catch (err) {
         if (err instanceof BooksApiError) {
           logger.warn(`[ UPDATE BOOKS TASK ] book skipped: not found in any source, bookId: ${book._id}, isbn: ${isbn}`)
@@ -90,26 +77,5 @@ async function updateBooksData (booksCursor: FindCursor<WithId<DBBook>>): Promis
     await booksCursor.close()
   }
 
-  logger.info(`[ UPDATE BOOKS TASK ] books data update complete, total: ${total}, updated: ${updatedBooks.length}, skipped: ${skipped}, failed: ${failed}`)
-  return updatedBooks
-}
-
-async function updateUserBooksData (updatedBooks: UpdatedBookData[]): Promise<void> {
-  if (updatedBooks.length === 0) return
-
-  const bulkOps = updatedBooks.map(({ bookId, authors, cover }) => ({
-    updateMany: {
-      filter: { bookId },
-      update: {
-        $set: {
-          bookAuthors: authors,
-          bookCover: cover
-        }
-      }
-    }
-  }))
-
-  const result = await userBooksDao.collection.bulkWrite(bulkOps)
-
-  logger.info(`[ UPDATE BOOKS TASK ] userBooks sync complete, modifiedCount: ${result.modifiedCount}`)
+  logger.info(`[ UPDATE BOOKS TASK ] books data update complete, total: ${total}, updated: ${updated}, skipped: ${skipped}, failed: ${failed}, userBooksModified: ${userBooksModified}`)
 }

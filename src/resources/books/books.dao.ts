@@ -1,8 +1,23 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
-import { DBBook, NewBookDao } from './books.interfaces.js'
+import { BookSyncData, DBBook, NewBookDao } from './books.interfaces.js'
 import { BookEntity } from './books.entity.js'
-import { isNotNull } from '../../utils.js'
+import { escapeRegExp, isNotNull } from '../../utils.js'
+import { ClientSession, Filter } from 'mongodb'
+import { ISBNUtils } from '../../utils/isbn.utils.js'
+
+function listBooksMongoFilter (search?: string): Filter<DBBook> {
+  if (search == null || search === '') return {}
+
+  // An ISBN is matched exactly, under any of its two forms; anything else, as a substring of the title or the authors
+  const isbn = ISBNUtils.sanitizeIsbn(search)
+  if (ISBNUtils.isValidIsbn13(isbn) || ISBNUtils.isValidIsbn10(isbn)) {
+    return { $or: [{ isbn13: isbn }, { isbn10: isbn }] }
+  }
+
+  const pattern = { $regex: escapeRegExp(search), $options: 'i' }
+  return { $or: [{ title: pattern }, { authors: pattern }] }
+}
 
 function dbBookToEntity (dbBook: DBBook | null): BookEntity | null {
   return dbBook == null ? null : new BookEntity(dbBook)
@@ -48,15 +63,25 @@ class BooksDao extends Dao<DBBook> {
     return dbBookToEntity(dbBook)
   }
 
-  async list (skip: number, limit: number): Promise<readonly BookEntity[]> {
-    const dbBooks = await this.collection.find().sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
+  async list (skip: number, limit: number, search?: string): Promise<readonly BookEntity[]> {
+    const dbBooks = await this.collection.find(listBooksMongoFilter(search)).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
 
     return dbBooks.map(dbBookToEntity).filter(isNotNull)
   }
 
-  async count (): Promise<number> {
-    const total = await this.collection.countDocuments()
+  async count (search?: string): Promise<number> {
+    const total = await this.collection.countDocuments(listBooksMongoFilter(search))
     return total
+  }
+
+  async update (id: string, data: Partial<BookSyncData>, session?: ClientSession): Promise<BookEntity | null> {
+    const dbBook = await this.collection.findOneAndUpdate(
+      { _id: id },
+      { $set: { ...data, updatedAt: new Date() } },
+      { returnDocument: 'after', session }
+    )
+
+    return dbBookToEntity(dbBook)
   }
 }
 

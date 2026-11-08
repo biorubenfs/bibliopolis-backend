@@ -55,15 +55,6 @@ describe('schema defaults reach the handlers', () => {
     const listed = results.find((result: any) => result.attributes.bookIsbn13 === isbnWithoutSources)
     expect(listed.attributes.bookCoverUrl).toBeNull()
   })
-
-  it('POST /books - a book without cover should be stored with the default cover', async () => {
-    const isbn13 = '9780306406157'
-    const created = await request('POST', '/books', { title: 'No cover', authors: [], isbn13 })
-    expect(created.status).toBe(201)
-
-    const book = await booksDao.collection.findOne({ isbn13 })
-    expect(book?.cover).toEqual(emptyCover)
-  })
 })
 
 describe('schema transforms reach the handlers', () => {

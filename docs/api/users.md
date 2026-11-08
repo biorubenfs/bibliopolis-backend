@@ -7,32 +7,33 @@ Atributos de un usuario:
 | Campo              | Tipo   | Descripción                                                    |
 | ------------------ | ------ | -------------------------------------------------------------- |
 | `name`             | string | Nombre del usuario                                             |
-| `email`            | string | Email del usuario                                              |
+| `email`            | string | Email del usuario, en minúsculas. Es único                     |
 | `role`             | string | `regular` o `admin`                                            |
 | `avatar`           | string | Imagen del avatar (PNG) codificada en base64, generada con RoboHash a partir del nombre. Puede ser una cadena vacía si no se pudo generar |
-| `emailValidatedAt` | date   | Fecha de validación del email (puede no estar presente)        |
 | `createdAt`        | date   | Fecha de creación                                              |
 | `updatedAt`        | date   | Fecha de la última modificación                                |
 
 ## POST /users
 
-Crea un nuevo usuario con rol `regular`. **Solo administradores.**
+Crea un usuario con rol `regular` y una contraseña generada por el servidor. **Solo administradores.** No hay registro público ni se pueden crear administradores.
+
+La contraseña tiene 12 caracteres sin los que se confunden fácilmente (`0`, `O`, `1`, `l`, `I`). Se devuelve **solo en esta respuesta**, en `meta.password`: el servidor guarda únicamente su hash y no se puede volver a consultar. Hacérsela llegar al usuario queda fuera de la API.
 
 ### Body
 
 ```json
 {
   "name": "user02",
-  "email": "user02@email.com",
-  "password": "contraseña_segura"
+  "email": "User02@email.com"
 }
 ```
 
-| Campo      | Tipo   | Requerido | Descripción                                  |
-| ---------- | ------ | --------- | -------------------------------------------- |
-| `name`     | string | Sí        | Nombre del usuario                           |
-| `email`    | string | Sí        | Email del usuario. Debe ser un email válido  |
-| `password` | string | Sí        | Contraseña del usuario (entre 6 y 20 caracteres) |
+| Campo   | Tipo   | Requerido | Descripción                                                          |
+| ------- | ------ | --------- | -------------------------------------------------------------------- |
+| `name`  | string | Sí        | Nombre del usuario. Se eliminan los espacios de los extremos; no puede quedar vacío |
+| `email` | string | Sí        | Email válido. Se guarda sin espacios en los extremos y en minúsculas |
+
+No se admite ningún otro campo (tampoco `password` ni `role`).
 
 ### Respuestas
 
@@ -51,29 +52,32 @@ Crea un nuevo usuario con rol `regular`. **Solo administradores.**
       "createdAt": "2026-02-14T23:33:56.859Z",
       "updatedAt": "2026-02-14T23:33:56.859Z"
     }
+  },
+  "meta": {
+    "password": "k7RmWq3ZpT9x"
   }
 }
 ```
 
 #### 400 Bad Request
 
-Body no válido (email con formato incorrecto, contraseña fuera de los límites, campos faltantes, …).
+Body no válido (email con formato incorrecto, nombre vacío, campos faltantes o campos no admitidos).
 
-#### 401 Unauthorized
+#### 403 Forbidden
 
 El usuario autenticado no es administrador.
 
 ```json
 {
-  "statusCode": 401,
-  "errorCode": "INVALID TOKEN ERROR",
+  "statusCode": 403,
+  "errorCode": "PERMISSION ERROR",
   "message": "must be admin"
 }
 ```
 
 #### 409 Conflict
 
-Ya existe un usuario con ese email.
+Ya existe un usuario con ese email (sin distinguir mayúsculas).
 
 ```json
 {
@@ -85,14 +89,69 @@ Ya existe un usuario con ese email.
 
 ---
 
+## POST /users/:id/password-reset
+
+Genera una contraseña nueva para un usuario `regular` y sustituye la anterior. **Solo administradores.** Igual que en el alta, la contraseña se devuelve **solo en esta respuesta**, en `meta.password`.
+
+Las sesiones abiertas del usuario siguen siendo válidas hasta que caduca su token. La contraseña de un administrador no se puede restablecer: la cambia él mismo con [`PATCH /users/me/password`](#patch-usersmepassword).
+
+### Respuestas
+
+#### 200 OK
+
+```json
+{
+  "results": {
+    "type": "users",
+    "id": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+    "attributes": {
+      "name": "user01",
+      "email": "user01@email.com",
+      "role": "regular",
+      "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "createdAt": "2000-01-01T00:00:00.000Z",
+      "updatedAt": "2026-02-14T23:33:56.859Z"
+    }
+  },
+  "meta": {
+    "password": "Hb4nYc8sWe2u"
+  }
+}
+```
+
+#### 403 Forbidden
+
+El usuario autenticado no es administrador (`must be admin`), o el usuario indicado es un administrador:
+
+```json
+{
+  "statusCode": 403,
+  "errorCode": "PERMISSION ERROR",
+  "message": "only the password of a regular user can be reset"
+}
+```
+
+#### 404 Not Found
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "user not found"
+}
+```
+
+---
+
 ## GET /users
 
-Lista todos los usuarios. **Solo administradores.** Admite [paginación](../index.md#paginacion).
+Lista los usuarios, del más reciente al más antiguo. **Solo administradores.** Admite [paginación](../index.md#paginacion) y búsqueda. Los usuarios de la lista no incluyen el atributo `avatar`.
 
 ### Query Params
 
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
+- `search`: string (opcional, máx. 100 caracteres) — Texto que debe aparecer en el nombre o en el email, sin distinguir mayúsculas. Se busca de forma literal
 
 ### Respuestas
 
@@ -108,7 +167,6 @@ Lista todos los usuarios. **Solo administradores.** Admite [paginación](../inde
         "name": "user01",
         "email": "user01@email.com",
         "role": "regular",
-        "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
       }
@@ -122,7 +180,11 @@ Lista todos los usuarios. **Solo administradores.** Admite [paginación](../inde
 }
 ```
 
-#### 401 Unauthorized
+#### 400 Bad Request
+
+Query params no válidos.
+
+#### 403 Forbidden
 
 El usuario autenticado no es administrador (`must be admin`).
 
@@ -221,15 +283,3 @@ Body no válido o contraseña actual incorrecta.
 #### 404 Not Found
 
 El usuario no existe.
-
----
-
-## GET /users/:id
-
-Valida el email de un usuario a partir del código de validación generado al crearlo.
-
-### Query Params
-
-- `code`: string — Código de validación
-
-> **En desarrollo:** este endpoint aún no tiene una URL de redirección definida y actualmente responde con un error `500`. No debe usarse todavía.

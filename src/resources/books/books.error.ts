@@ -12,3 +12,9 @@ export class BookNotFoundError extends ApiError {
     super(ApiRestErrorCode.NotFoundError, 404, message)
   }
 }
+
+export class CoverNotAvailableError extends ApiError {
+  constructor (message: string) {
+    super(ApiRestErrorCode.CoverNotAvailable, 422, message)
+  }
+}

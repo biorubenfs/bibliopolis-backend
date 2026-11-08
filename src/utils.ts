@@ -14,6 +14,10 @@ export enum CoverSize {
   L = 'L'
 }
 
+export function escapeRegExp (value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export function isNotNull<T> (value: T | null): value is T {
   return value !== null
 }

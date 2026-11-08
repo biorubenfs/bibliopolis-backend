@@ -709,7 +709,7 @@ describe('import report', () => {
     expect(responses.map(response => response.status)).toEqual([403, 403, 403, 403, 403])
   })
 
-  it('should not give an administrator access to the imports of another user', async () => {
+  it('should reject an administrator in the imports routes', async () => {
     const importId = await finishedImport()
     const adminAuth = testUtils.buildAuthorizationHeader(makeJwt('01J9BK7YX0D5NHHBN70Q4N7P69', Role.Admin))
 

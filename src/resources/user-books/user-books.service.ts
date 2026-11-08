@@ -2,7 +2,6 @@ import { CollectionResultObject, SingleResultObject, StreamResultObject } from '
 import { Page } from '../../types.js'
 import { LibraryPermissionsError } from '../libraries/libraries.error.js'
 import librariesService from '../libraries/libraries.service.js'
-import { Role } from '../users/users.interfaces.js'
 
 import { DownloadFormat, UpdateUserBook } from './user-books.interfaces.js'
 import userBooksDao from './user-books.dao.js'
@@ -12,28 +11,24 @@ import { createLibraryBooksPDFStream } from '../../utils/pdf-creator.utils.js'
 import { createLibraryBooksCSVStream } from '../../utils/csv-creator.utils.js'
 
 class UserBooksService {
-  async list (page: Page, userId: string, role: Role, filter: { userId?: string, librariesIds?: readonly string[], search?: string }): Promise<CollectionResultObject<UserBookEntity>> {
-    if (filter.userId != null && filter.userId !== userId && role !== Role.Admin) {
+  async list (page: Page, userId: string, filter: { userId?: string, librariesIds?: readonly string[], search?: string }): Promise<CollectionResultObject<UserBookEntity>> {
+    if (filter.userId != null && filter.userId !== userId) {
       throw new UserBookPermissionsError('user can only list this own books')
     }
 
-    if (role !== Role.Admin) {
-      // TODO: optimize this, we should not fetch all libraries just to check if the user has permissions on the requested ones, we can do a single query to check if the requested libraryIds are valid for the user
-      const libraries = await librariesService.list(userId, role, { skip: 0, limit: Number.MAX_SAFE_INTEGER })
-      const userLibIds = libraries.entities.map(lib => lib.id)
-      if (filter.librariesIds != null) {
-        const hasInvalidLibId = filter.librariesIds.some(libId => !userLibIds.includes(libId))
-        if (hasInvalidLibId) {
-          throw new LibraryPermissionsError('user can only list books from own libraries')
-        }
-      } else {
-        filter.librariesIds = userLibIds
+    // TODO: optimize this, we should not fetch all libraries just to check if the user has permissions on the requested ones, we can do a single query to check if the requested libraryIds are valid for the user
+    const libraries = await librariesService.list(userId, { skip: 0, limit: Number.MAX_SAFE_INTEGER })
+    const userLibIds = libraries.entities.map(lib => lib.id)
+    if (filter.librariesIds != null) {
+      const hasInvalidLibId = filter.librariesIds.some(libId => !userLibIds.includes(libId))
+      if (hasInvalidLibId) {
+        throw new LibraryPermissionsError('user can only list books from own libraries')
       }
-
-      if (filter.userId == null) {
-        filter.userId = userId
-      }
+    } else {
+      filter.librariesIds = userLibIds
     }
+
+    filter.userId = userId
 
     const [userBooks, total] = await Promise.all([
       await userBooksDao.list(filter, page.skip, page.limit),
@@ -62,8 +57,8 @@ class UserBooksService {
     return new SingleResultObject(updUserBookEntity)
   }
 
-  async download (libraryId: string, userId: string, role: Role, format: DownloadFormat = DownloadFormat.PDF): Promise<StreamResultObject> {
-    const library = await librariesService.get(libraryId, userId, role)
+  async download (libraryId: string, userId: string, format: DownloadFormat = DownloadFormat.PDF): Promise<StreamResultObject> {
+    const library = await librariesService.get(libraryId, userId)
 
     const booksCursor = await userBooksDao.listCursor({ userId, librariesIds: [libraryId] })
 

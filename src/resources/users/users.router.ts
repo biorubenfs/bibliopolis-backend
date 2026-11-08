@@ -2,18 +2,18 @@ import { Router } from 'express'
 import usersService from './users.service.js'
 import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
-import { createUserSchema, updatePasswordSchema, updateUserSchema } from './users.schemas.js'
+import { createUserSchema, updatePasswordSchema, updateUserSchema, usersQuerySchema } from './users.schemas.js'
 import { checkAdmin } from '../../middlewares/jwt.middleware.js'
 import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
+import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 import { parseSkipLimitQP } from '../../utils.js'
 import { HttpStatusCode } from '../../types.js'
-import { RedirectResultObject, SingleResultObject } from '../../results.js'
 
 const usersRouter = Router()
 
 usersRouter.post('/', checkAdmin, bodyValidator(createUserSchema), handler(async (req) => {
   const result = await usersService.signup(req.body)
-  return { status: HttpStatusCode.Created, data: new SingleResultObject(result) }
+  return { status: HttpStatusCode.Created, data: result }
 }))
 
 /* maybe we could remove this service because is redundante with auth/me service */
@@ -22,8 +22,10 @@ usersRouter.get('/me', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-usersRouter.get('/', checkAdmin, queryPaginationValidator, handler(async (req) => {
-  const result = await usersService.list(parseSkipLimitQP(req))
+usersRouter.get('/', checkAdmin, queryParamsValidator(usersQuerySchema), queryPaginationValidator, handler(async (req) => {
+  // already validated by queryParamsValidator, parsed again to apply the trim
+  const { search } = usersQuerySchema.parse(req.query)
+  const result = await usersService.list(parseSkipLimitQP(req), { search })
   return { status: HttpStatusCode.OK, data: result }
 }))
 
@@ -37,20 +39,9 @@ usersRouter.patch('/me', bodyValidator(updateUserSchema), handler(async (req) =>
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-usersRouter.get('/:id', handler(async (req) => {
-  const code = req.query.code as string
-  const userId = req.params.id
-
-  if (code == null) {
-    throw new Error('no validation code provided')
-  }
-  await usersService.validate(userId, code)
-
-  // Redirect to the login page after successful validation
-  // TODO: replace with a proper URL
-  const result = new RedirectResultObject('')
-
-  return { status: HttpStatusCode.Redirect, data: result }
+usersRouter.post('/:id/password-reset', checkAdmin, handler(async (req) => {
+  const result = await usersService.resetPassword(req.params.id)
+  return { status: HttpStatusCode.OK, data: result }
 }))
 
 export default usersRouter
