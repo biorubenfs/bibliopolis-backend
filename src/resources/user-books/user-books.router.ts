@@ -12,8 +12,8 @@ import { z } from 'zod'
 const userBooksRouter = Router()
 
 userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), queryPaginationValidator, handler(async (req) => {
-  // req query is alreday validated and typed by queryParamsValidator middleware
-  const { userId, libraryId, search } = req.query as z.infer<typeof userBooksQuerySchema>
+  // Parsed again to get the transformed values (such as the trimmed search): the middleware only validates
+  const { userId, libraryId, search } = userBooksQuerySchema.parse(req.query)
   // normalize libraryId to array
   const librariesIds = libraryId != null
     ? Array.isArray(libraryId) ? libraryId : [libraryId]

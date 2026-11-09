@@ -27,13 +27,13 @@ Lista los user books. Admite [paginación](../index.md#paginacion), filtros por 
 
 - Un usuario normal solo puede listar sus propios user books de sus bibliotecas. Si no indica `libraryId`, se listan los de todas sus bibliotecas.
 
-Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo. Con `search` se ordenan por relevancia.
+Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo, también con `search`.
 
 ### Query Params
 
 - `libraryId`: string (opcional, se puede repetir) — Acota la búsqueda a una o varias bibliotecas (`?libraryId=A&libraryId=B`)
 - `userId`: string (opcional) — Acota el listado a los user books de un usuario. Un usuario normal solo puede indicar su propio ID
-- `search`: string (opcional) — Busca en el título, los autores y los ISBN
+- `search`: string (opcional, máx. 100 caracteres) — Si es un ISBN-10 o ISBN-13 válido (con o sin guiones), busca los user books con ese ISBN exacto. Si no, devuelve los que contienen el texto en el título, en algún autor o en los ISBN, aunque sea parte de una palabra (`ossi` encuentra «Rossiya»). Se busca de forma literal y sin distinguir mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. Se combina con `libraryId`, y el `total` de `paginationInfo` cuenta solo los user books que coinciden
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -73,7 +73,7 @@ Los resultados se ordenan por ID de forma descendente, es decir, del añadido m�
 
 #### 400 Bad Request
 
-Query params no válidos.
+Parámetros de paginación no válidos, o `search` repetido o con más de 100 caracteres.
 
 ```json
 {
@@ -82,9 +82,13 @@ Query params no válidos.
   "message": "invalid query params",
   "validationError": [
     {
-      "code": "custom",
-      "message": "limit must be a number > 0 and <= 100",
-      "path": ["limit"]
+      "code": "too_big",
+      "maximum": 100,
+      "type": "string",
+      "inclusive": true,
+      "exact": false,
+      "message": "String must contain at most 100 character(s)",
+      "path": ["search"]
     }
   ]
 }

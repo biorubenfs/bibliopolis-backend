@@ -13,7 +13,7 @@ export const userBookUpdateSchema = z.object({
 export const userBooksQuerySchema = z.object({
   userId: z.string().optional(),
   libraryId: z.union([z.string(), z.array(z.string())]).optional(),
-  search: z.string().optional()
+  search: z.string().trim().max(100).optional()
 })
 
 export const userBooksDownloadQuerySchema = z.object({
