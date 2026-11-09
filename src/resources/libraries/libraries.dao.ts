@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBLibrary, LibrariesListFilter, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
+import { DBLibrary, LibrariesListFilter, LibrariesStats, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { ClientSession, Filter } from 'mongodb'
 
@@ -124,6 +124,18 @@ class LibrariesDao extends Dao<DBLibrary> {
       { returnDocument: 'after' }
     )
     return dbLibraryToEntity(updatedLibrary)
+  }
+
+  async statsByUser (userId: string): Promise<LibrariesStats> {
+    const [stats] = await this.collection.aggregate<LibrariesStats>([
+      { $match: { userId } },
+      { $project: { size: { $size: '$books' } } },
+      { $group: { _id: null, count: { $sum: 1 }, totalBooks: { $sum: '$size' }, largestBooks: { $max: '$size' } } },
+      { $project: { _id: 0, count: 1, totalBooks: 1, largestBooks: 1 } }
+    ]).toArray()
+
+    // Without libraries, $group returns no document
+    return stats ?? { count: 0, totalBooks: 0, largestBooks: null }
   }
 }
 

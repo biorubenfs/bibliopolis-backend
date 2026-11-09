@@ -12,3 +12,11 @@ export interface LibrariesListFilter {
 }
 
 export type DBLibrary = Omit<LibraryEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
+
+/** Figures of the libraries of a user, for the backoffice. Never their names. */
+export interface LibrariesStats {
+  count: number
+  totalBooks: number
+  /** Books in the largest library, or null without libraries. */
+  largestBooks: number | null
+}

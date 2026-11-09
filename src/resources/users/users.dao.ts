@@ -50,6 +50,12 @@ class UsersDao extends Dao<DBUser> {
     return dbUserToEntity(dbUser)
   }
 
+  async findByIdWithoutAvatar (id: string): Promise<UserEntity | null> {
+    const dbUser = await this.collection.findOne({ _id: id }, { projection: { avatar: 0 } })
+
+    return dbUserToEntity(dbUser)
+  }
+
   async findByEmail (email: string): Promise<UserEntity | null> {
     const dbUser = await this.collection.findOne({ email })
 

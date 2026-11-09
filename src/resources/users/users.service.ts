@@ -1,6 +1,6 @@
 import usersDao from './users.dao.js'
-import { CollectionResultObject, SingleResultObject } from '../../results.js'
-import { CreateUser, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
+import { CollectionResultObject, MiscResultObject, SingleResultObject } from '../../results.js'
+import { CreateUser, Role, UpdateUser, UsersListFilter, UserStats } from './users.interfaces.js'
 import bcrypt from 'bcryptjs'
 import config from '../../config.js'
 import { InvalidCurrentPassword, UserEmailAlreadyExists, UserNotFoundError, UserPasswordResetForbiddenError } from './users.error.js'
@@ -11,6 +11,8 @@ import { transformImageToBase64 } from '../../utils.js'
 import logger from '../../logger.js'
 import { MongoServerError } from 'mongodb'
 import { generatePassword } from './users.utils.js'
+import librariesDao from '../libraries/libraries.dao.js'
+import userBooksDao from '../user-books/user-books.dao.js'
 
 const DEFAULT_AVATAR_BASE64 = '' // TODO: add a default avatar
 
@@ -71,6 +73,54 @@ class UsersService {
     }
 
     return new SingleResultObject(user)
+  }
+
+  /** For the backoffice: without the avatar, as in the list. */
+  async getByIdWithoutAvatar (id: string): Promise<SingleResultObject<UserEntity>> {
+    const user = await usersDao.findByIdWithoutAvatar(id)
+    if (user == null) {
+      throw new UserNotFoundError('user not found')
+    }
+
+    return new SingleResultObject(user)
+  }
+
+  /** Only for regular users: an admin has no libraries, so it is answered as if it did not exist. */
+  async getStats (id: string): Promise<MiscResultObject> {
+    const user = await usersDao.findByIdWithoutAvatar(id)
+    if (user == null || user.role !== Role.Regular) {
+      throw new UserNotFoundError('user not found')
+    }
+
+    const [libraries, books] = await Promise.all([
+      librariesDao.statsByUser(id),
+      userBooksDao.statsByUser(id)
+    ])
+
+    const distribution: Record<string, number> = {}
+    for (let rating = 1; rating <= 10; rating++) {
+      distribution[rating] = books.ratingCounts.find((item) => item.rating === rating)?.count ?? 0
+    }
+
+    const stats: UserStats = {
+      libraries: {
+        count: libraries.count,
+        averageBooks: libraries.count === 0 ? 0 : libraries.totalBooks / libraries.count,
+        largestBooks: libraries.largestBooks
+      },
+      books: {
+        total: books.total,
+        rated: books.rated,
+        unrated: books.total - books.rated,
+        withoutLibrary: books.withoutLibrary
+      },
+      ratings: {
+        average: books.averageRating,
+        distribution
+      }
+    }
+
+    return new MiscResultObject('user-stats', stats)
   }
 
   async getByEmail (email: string): Promise<UserEntity> {

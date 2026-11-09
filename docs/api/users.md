@@ -190,6 +190,110 @@ El usuario autenticado no es administrador (`must be admin`).
 
 ---
 
+## GET /users/:id
+
+Devuelve un usuario. **Solo administradores.** Igual que en la lista, no incluye el atributo `avatar`.
+
+### Respuestas
+
+#### 200 OK
+
+```json
+{
+  "results": {
+    "type": "users",
+    "id": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+    "attributes": {
+      "name": "user01",
+      "email": "user01@email.com",
+      "role": "regular",
+      "createdAt": "2000-01-01T00:00:00.000Z",
+      "updatedAt": "2000-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+#### 403 Forbidden
+
+El usuario autenticado no es administrador (`must be admin`).
+
+#### 404 Not Found
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "user not found"
+}
+```
+
+---
+
+## GET /users/:id/stats
+
+Devuelve estadísticas de las bibliotecas y los libros de un usuario `regular`, para el backoffice. **Solo administradores.** Por privacidad, la respuesta solo contiene cifras: nunca nombres de bibliotecas ni datos de los libros.
+
+Se cuentan todos los libros del usuario, también los que no están en ninguna biblioteca (como en [`GET /user-books`](user-books.md)).
+
+### Respuestas
+
+#### 200 OK
+
+```json
+{
+  "results": {
+    "type": "user-stats",
+    "attributes": {
+      "libraries": {
+        "count": 3,
+        "averageBooks": 1.3333333333333333,
+        "largestBooks": 3
+      },
+      "books": {
+        "total": 8,
+        "rated": 6,
+        "unrated": 2,
+        "withoutLibrary": 5
+      },
+      "ratings": {
+        "average": 7.5,
+        "distribution": { "1": 0, "2": 0, "3": 1, "4": 0, "5": 0, "6": 0, "7": 2, "8": 0, "9": 2, "10": 1 }
+      }
+    }
+  }
+}
+```
+
+| Campo | Tipo | Descripción |
+| ----- | ---- | ----------- |
+| `libraries.count` | number | Número de bibliotecas |
+| `libraries.averageBooks` | number | Media de libros por biblioteca, sin redondear. Un libro que está en dos bibliotecas cuenta en las dos. `0` si no tiene bibliotecas |
+| `libraries.largestBooks` | number \| null | Libros de la biblioteca más grande. `null` si no tiene bibliotecas |
+| `books.total` | number | Libros del usuario |
+| `books.rated` / `books.unrated` | number | Libros con y sin valoración |
+| `books.withoutLibrary` | number | Libros que no están en ninguna biblioteca |
+| `ratings.average` | number \| null | Valoración media de los libros valorados, sin redondear. `null` si no hay ninguno |
+| `ratings.distribution` | object | Número de libros con cada valoración. Siempre tiene las diez claves, de `"1"` a `"10"` |
+
+#### 403 Forbidden
+
+El usuario autenticado no es administrador (`must be admin`).
+
+#### 404 Not Found
+
+El usuario no existe o es un administrador, que no tiene bibliotecas:
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "user not found"
+}
+```
+
+---
+
 ## GET /users/me
 
 Devuelve los datos del usuario autenticado. Es equivalente a [`GET /auth/me`](auth.md#get-authme).

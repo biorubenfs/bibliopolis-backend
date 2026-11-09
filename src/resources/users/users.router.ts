@@ -39,6 +39,17 @@ usersRouter.patch('/me', bodyValidator(updateUserSchema), handler(async (req) =>
   return { status: HttpStatusCode.OK, data: result }
 }))
 
+// After the /me routes, so that «me» is not taken as an id
+usersRouter.get('/:id', checkAdmin, handler(async (req) => {
+  const result = await usersService.getByIdWithoutAvatar(req.params.id)
+  return { status: HttpStatusCode.OK, data: result }
+}))
+
+usersRouter.get('/:id/stats', checkAdmin, handler(async (req) => {
+  const result = await usersService.getStats(req.params.id)
+  return { status: HttpStatusCode.OK, data: result }
+}))
+
 usersRouter.post('/:id/password-reset', checkAdmin, handler(async (req) => {
   const result = await usersService.resetPassword(req.params.id)
   return { status: HttpStatusCode.OK, data: result }

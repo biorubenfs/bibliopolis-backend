@@ -38,3 +38,14 @@ export interface NewUserBook {
 }
 
 export type UpdateUserBook = z.infer<typeof userBookUpdateSchema>
+
+/** Figures of the books of a user, for the backoffice. Never their titles. */
+export interface UserBooksStats {
+  total: number
+  rated: number
+  withoutLibrary: number
+  /** Average of the rated books, or null if none is rated. */
+  averageRating: number | null
+  /** Books with each rating; ratings without books are left out. */
+  ratingCounts: ReadonlyArray<{ rating: UserBookRating, count: number }>
+}

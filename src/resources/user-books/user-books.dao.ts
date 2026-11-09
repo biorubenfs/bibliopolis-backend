@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBUserBook, UpdateUserBook } from './user-books.interfaces.js'
+import { DBUserBook, UpdateUserBook, UserBooksStats } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
 import { AggregationCursor, ClientSession, Filter, WithId } from 'mongodb'
 import { BookEntity } from '../books/books.entity.js'
@@ -185,6 +185,43 @@ class UserBooksDao extends Dao<DBUserBook> {
       }
     )
     return dbUserBookToEntity(upd)
+  }
+
+  /** Counts every book of the user, also those that are in no library, as «Mis libros» does. */
+  async statsByUser (userId: string): Promise<UserBooksStats> {
+    const [{ totals, ratingCounts }] = await this.collection.aggregate<{
+      totals: Array<Pick<UserBooksStats, 'total' | 'rated' | 'withoutLibrary' | 'averageRating'>>
+      ratingCounts: UserBooksStats['ratingCounts']
+    }>([
+      { $match: { userId } },
+      {
+        $facet: {
+          totals: [
+            {
+              $group: {
+                _id: null,
+                total: { $sum: 1 },
+                rated: { $sum: { $cond: [{ $ne: ['$rating', null] }, 1, 0] } },
+                withoutLibrary: { $sum: { $cond: [{ $eq: [{ $size: '$libraries' }, 0] }, 1, 0] } },
+                // $avg ignores the null ratings, and gives null when there is no number
+                averageRating: { $avg: '$rating' }
+              }
+            },
+            { $project: { _id: 0 } }
+          ],
+          ratingCounts: [
+            { $match: { rating: { $ne: null } } },
+            { $group: { _id: '$rating', count: { $sum: 1 } } },
+            { $project: { _id: 0, rating: '$_id', count: 1 } }
+          ]
+        }
+      }
+    ]).toArray()
+
+    return {
+      ...(totals[0] ?? { total: 0, rated: 0, withoutLibrary: 0, averageRating: null }),
+      ratingCounts
+    }
   }
 }
 
