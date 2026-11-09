@@ -59,7 +59,7 @@ Modelo de dominio: `books` es un catálogo compartido indexado por ISBN; `user-b
 
 Fuentes externas de libros: `resources/sources/sources.config.ts` lista las fuentes por orden de prioridad; para añadir una fuente nueva, hacerlo ahí. Las portadas se guardan como `{ source, value }` y se convierten en URLs con `getCoverUrl` usando las variables de entorno `*_COVER_URL_PATTERN`. Las tareas cron se registran en `src/tasks/scheduler.ts` (p. ej. la sincronización semanal de libros sin autores/portada, que se propaga a los user-books).
 
-La búsqueda en user-books usa una etapa `$search` de Atlas Search, pero solo cuando `ENVIRONMENT` no es `local`/`test`; en esos entornos se usa una consulta normal.
+La búsqueda en user-books es literal (`$regex` escapado, o ISBN exacto) en todos los entornos. El código de Atlas Search (`$search` con el índice `user_books_search`) está comentado en `user-books.dao.ts`, como punto de partida para un futuro autocompletado por relevancia.
 
 Formato de las respuestas (generadas por `handler()` a partir de los objetos resultado):
 

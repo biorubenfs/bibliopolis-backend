@@ -1,92 +1,80 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
-import { isNotNull } from '../../utils.js'
+import { escapeRegExp, isNotNull } from '../../utils.js'
 import { DBUserBook, UpdateUserBook } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
-import { AggregationCursor, Document, WithId, ClientSession } from 'mongodb'
+import { AggregationCursor, ClientSession, Filter, WithId } from 'mongodb'
 import { BookEntity } from '../books/books.entity.js'
 import { BookSyncData } from '../books/books.interfaces.js'
-import config from '../../config.js'
+import { ISBNUtils } from '../../utils/isbn.utils.js'
 
 function dbUserBookToEntity (dbUserBook: DBUserBook | null): UserBookEntity | null {
   return dbUserBook == null ? null : new UserBookEntity(dbUserBook)
 }
 
-function buildSearchAggregationPipeline (filters: { librariesIds?: readonly string[], userId?: string, search?: string }): Document[] {
-  const searchFilters: any = {}
-  if (filters.librariesIds != null) {
-    searchFilters.libraries = { $in: filters.librariesIds }
-  }
-  if (filters.userId != null) {
-    searchFilters.userId = filters.userId
-  }
-
-  const aggregate: Document[] = []
-
-  // $search must be the first stage in the pipeline when using Atlas Search
-  if (filters.search != null && config.environment !== 'local' && config.environment !== 'test') {
-    // use atlas search
-    aggregate.push({
-      $search: {
-        index: 'user_books_search',
-        compound: {
-          should: [
-            {
-              autocomplete: {
-                query: filters.search,
-                path: 'bookIsbn13'
-              }
-            },
-            {
-              autocomplete: {
-                query: filters.search,
-                path: 'bookIsbn10'
-              }
-            },
-            {
-              autocomplete: {
-                query: filters.search,
-                path: 'bookTitle'
-              }
-            },
-            {
-              text: {
-                query: filters.search,
-                path: 'bookTitle'
-              }
-            },
-            {
-              text: {
-                query: filters.search,
-                path: 'bookAuthors'
-              }
-            }
-          ],
-          minimumShouldMatch: 1
-        }
-      }
-    })
-  }
-
-  // Add match filters
-  aggregate.push({ $match: searchFilters })
-
-  // search in mongo with regex for local/test environments
-  if (filters.search != null && (config.environment === 'local' || config.environment === 'test')) {
-    aggregate.push({
-      $match: {
-        $or: [
-          { bookIsbn13: { $regex: filters.search, $options: 'i' } },
-          { bookIsbn10: { $regex: filters.search, $options: 'i' } },
-          { bookTitle: { $regex: filters.search, $options: 'i' } },
-          { bookAuthors: { $regex: filters.search, $options: 'i' } }
-        ]
-      }
-    })
-  }
-
-  return aggregate
+interface UserBooksFilter {
+  librariesIds?: readonly string[]
+  userId?: string
+  search?: string
 }
+
+/**
+ * Literal search: an ISBN is matched exactly, under any of its two forms and with or without hyphens; anything else,
+ * as a case-insensitive substring of the title, the authors or the ISBNs. User input is escaped so it is matched literally.
+ */
+function buildSearchMatch (search: string): Filter<DBUserBook> {
+  const isbn = ISBNUtils.sanitizeIsbn(search)
+  if (ISBNUtils.isValidIsbn13(isbn) || ISBNUtils.isValidIsbn10(isbn)) {
+    return { $or: [{ bookIsbn13: isbn }, { bookIsbn10: isbn }] }
+  }
+
+  const pattern = { $regex: escapeRegExp(search), $options: 'i' }
+  return {
+    $or: [
+      { bookTitle: pattern },
+      { bookAuthors: pattern },
+      { bookIsbn13: pattern },
+      { bookIsbn10: pattern }
+    ]
+  }
+}
+
+function buildMongoFilter (filters: UserBooksFilter): Filter<DBUserBook> {
+  return {
+    ...(filters.librariesIds != null ? { libraries: { $in: [...filters.librariesIds] } } : {}),
+    ...(filters.userId != null ? { userId: filters.userId } : {}),
+    ...(filters.search != null && filters.search !== '' ? buildSearchMatch(filters.search) : {})
+  }
+}
+
+/*
+ * Atlas Search alternative, disabled for now: it only works on MongoDB Atlas with the `user_books_search` index, cannot
+ * be tested locally or in the CI, and behaves differently from the literal search. Kept as a starting point for a
+ * future autocomplete with relevance ranking. To use it:
+ * - `$search` must be the first stage of the pipeline, so `list` and `count` need an aggregation again
+ * - put the user and library filters inside `compound.filter` instead of a later `$match`, so Atlas does not score
+ *   and return the books of every user
+ * - keep the relevance order: do not add a `$sort` after it
+ * - skip the stage for an empty search
+ *
+ * function buildAtlasSearchStage (search: string): Document {
+ *   return {
+ *     $search: {
+ *       index: 'user_books_search',
+ *       compound: {
+ *         should: [
+ *           { autocomplete: { query: search, path: 'bookIsbn13' } },
+ *           { autocomplete: { query: search, path: 'bookIsbn10' } },
+ *           { autocomplete: { query: search, path: 'bookTitle' } },
+ *           { text: { query: search, path: 'bookTitle' } },
+ *           { text: { query: search, path: 'bookAuthors' } }
+ *         ],
+ *         minimumShouldMatch: 1
+ *       }
+ *     }
+ *   }
+ * }
+ */
 
 class UserBooksDao extends Dao<DBUserBook> {
   constructor () {
@@ -149,41 +137,24 @@ class UserBooksDao extends Dao<DBUserBook> {
       { session })
   }
 
-  async list (filters: { librariesIds?: readonly string[], userId?: string, search?: string }, skip: number, limit: number): Promise<readonly UserBookEntity[]> {
-    const pipeline = buildSearchAggregationPipeline(filters)
-
-    // Newest first: ULIDs sort by creation time. Without a sort the pages may overlap.
-    // Search results keep their relevance order
-    if (filters.search == null) {
-      pipeline.push({ $sort: { _id: -1 } })
-    }
-
-    pipeline.push({ $skip: skip })
-    pipeline.push({ $limit: limit })
-
+  async list (filters: UserBooksFilter, skip: number, limit: number): Promise<readonly UserBookEntity[]> {
+    // Newest first: ULIDs sort by creation time. Without a sort the pages may overlap
     const dbUserBooks = await this.collection
-      .aggregate<DBUserBook>(pipeline)
+      .find(buildMongoFilter(filters))
+      .sort({ _id: -1 })
+      .skip(skip)
+      .limit(limit)
       .toArray()
 
     return dbUserBooks.map(dbUserBookToEntity).filter(isNotNull)
   }
 
-  async listCursor (filters: { librariesIds?: readonly string[], userId?: string }): Promise<AggregationCursor<WithId<DBUserBook>>> {
-    const pipeline = buildSearchAggregationPipeline(filters)
-    const dbUserBooksCursor = this.collection.aggregate<DBUserBook>(pipeline)
-
-    return dbUserBooksCursor
+  async listCursor (filters: Omit<UserBooksFilter, 'search'>): Promise<AggregationCursor<WithId<DBUserBook>>> {
+    return this.collection.aggregate<WithId<DBUserBook>>([{ $match: buildMongoFilter(filters) }])
   }
 
-  async count (filters: { librariesIds?: readonly string[], userId?: string, search?: string }): Promise<number> {
-    const pipeline = buildSearchAggregationPipeline(filters)
-
-    pipeline.push({ $count: 'total' })
-
-    const countResult = await this.collection.aggregate<{ total: number }>(pipeline).toArray()
-    const total = countResult.length > 0 ? countResult[0].total : 0
-
-    return total
+  async count (filters: UserBooksFilter): Promise<number> {
+    return await this.collection.countDocuments(buildMongoFilter(filters))
   }
 
   /**
