@@ -64,7 +64,8 @@ class BooksDao extends Dao<DBBook> {
   }
 
   async list (skip: number, limit: number, search?: string): Promise<readonly BookEntity[]> {
-    const dbBooks = await this.collection.find(listBooksMongoFilter(search)).sort({ createdAt: -1 }).skip(skip).limit(limit).toArray()
+    // Newest first: ULIDs sort by creation time, and _id is indexed while createdAt is not
+    const dbBooks = await this.collection.find(listBooksMongoFilter(search)).sort({ _id: -1 }).skip(skip).limit(limit).toArray()
 
     return dbBooks.map(dbBookToEntity).filter(isNotNull)
   }
