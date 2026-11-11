@@ -127,8 +127,8 @@ class BooksService {
 
   async list (page: Page, search?: string): Promise<CollectionResultObject<BookEntity>> {
     const [books, total] = await Promise.all([
-      await booksDao.list(page.skip, page.limit, search),
-      await booksDao.count(search)
+      booksDao.list(page.skip, page.limit, search),
+      booksDao.count(search)
     ])
 
     return new CollectionResultObject(books, { ...page, total })

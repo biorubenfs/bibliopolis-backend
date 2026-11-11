@@ -93,8 +93,8 @@ class LibrariesService {
 
   async list (userId: string, page: Page, filter: LibrariesListFilter = {}): Promise<CollectionResultObject<LibraryEntity>> {
     const [libraries, total] = await Promise.all([
-      await librariesDao.list(userId, page.skip, page.limit, filter),
-      await librariesDao.count(userId, filter)
+      librariesDao.list(userId, page.skip, page.limit, filter),
+      librariesDao.count(userId, filter)
     ])
 
     const mockPaginationObject = { ...page, total }

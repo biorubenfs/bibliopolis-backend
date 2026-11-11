@@ -85,8 +85,8 @@ class UsersService {
 
   async list (page: Page, filter: UsersListFilter = {}): Promise<CollectionResultObject<UserEntity>> {
     const [users, total] = await Promise.all([
-      await usersDao.list(page.skip, page.limit, filter),
-      await usersDao.count(filter)
+      usersDao.list(page.skip, page.limit, filter),
+      usersDao.count(filter)
     ])
 
     return new CollectionResultObject(users, { ...page, total })
