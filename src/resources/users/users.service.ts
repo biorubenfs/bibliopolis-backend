@@ -14,8 +14,9 @@ import { generatePassword } from './users.utils.js'
 
 const DEFAULT_AVATAR_BASE64 = '' // TODO: add a default avatar
 
-export function hashPasswordSync (password: string): string {
-  return bcrypt.hashSync(password, config.hashRounds)
+// Asynchronous: hashing takes about a hundred milliseconds and must not block the other requests
+export async function hashPassword (password: string): Promise<string> {
+  return await bcrypt.hash(password, config.hashRounds)
 }
 
 class UsersService {
@@ -32,7 +33,7 @@ class UsersService {
     const userData: CreateUser = {
       name: body.name,
       email: body.email,
-      password: hashPasswordSync(password),
+      password: await hashPassword(password),
       avatar: await this.generateAvatar(body.name)
     }
 
@@ -56,7 +57,7 @@ class UsersService {
     }
 
     const password = generatePassword()
-    const updUser = await usersDao.updatePassword(userId, hashPasswordSync(password))
+    const updUser = await usersDao.updatePassword(userId, await hashPassword(password))
     if (updUser == null) {
       throw new UserNotFoundError('user not found')
     }
@@ -101,7 +102,7 @@ class UsersService {
       throw new InvalidCurrentPassword('invalid current password')
     }
 
-    const hashedPassword = hashPasswordSync(newPassword)
+    const hashedPassword = await hashPassword(newPassword)
     const updUser = await usersDao.updatePassword(userId, hashedPassword)
     if (updUser == null) {
       throw new UserNotFoundError('user not found')
