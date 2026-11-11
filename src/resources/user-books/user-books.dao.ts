@@ -14,6 +14,8 @@ function dbUserBookToEntity (dbUserBook: DBUserBook | null): UserBookEntity | nu
 
 interface UserBooksFilter {
   librariesIds?: readonly string[]
+  /** Only the books that are still in some library: a book removed from its last library keeps its data but is not listed */
+  inAnyLibrary?: boolean
   userId?: string
   search?: string
 }
@@ -42,6 +44,7 @@ function buildSearchMatch (search: string): Filter<DBUserBook> {
 function buildMongoFilter (filters: UserBooksFilter): Filter<DBUserBook> {
   return {
     ...(filters.librariesIds != null ? { libraries: { $in: [...filters.librariesIds] } } : {}),
+    ...(filters.inAnyLibrary === true ? { 'libraries.0': { $exists: true } } : {}),
     ...(filters.userId != null ? { userId: filters.userId } : {}),
     ...(filters.search != null && filters.search !== '' ? buildSearchMatch(filters.search) : {})
   }

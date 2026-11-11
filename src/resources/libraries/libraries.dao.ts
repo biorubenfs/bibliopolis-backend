@@ -98,6 +98,11 @@ class LibrariesDao extends Dao<DBLibrary> {
     return dbLibraries.map(dbLibrary => dbLibraryToEntity(dbLibrary)).filter(isNotNull)
   }
 
+  /** How many of the given libraries belong to the user. */
+  async countByIds (ids: readonly string[], userId: string): Promise<number> {
+    return await this.collection.countDocuments({ _id: { $in: [...ids] }, userId })
+  }
+
   async count (userId: string, filter: LibrariesListFilter = {}): Promise<number> {
     const mongoFilter = listLibrariesMongoFilter(userId, filter)
     const total = await this.collection.countDocuments(mongoFilter)
