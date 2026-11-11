@@ -80,6 +80,19 @@ export interface ImportCounts {
 
 export type ImportRequest = z.infer<typeof importRequestSchema>
 
+/** Rows of an import with the same outcome, and how many of them have no resolution */
+export interface ImportOutcomeCount {
+  importId: string
+  outcome: ImportItemOutcome
+  count: number
+  unresolved: number
+}
+
+export interface UnresolvedIsbn {
+  importId: string
+  isbn13: string
+}
+
 export interface ImportItemsFilter {
   outcomes?: readonly ImportItemOutcome[]
   pending?: boolean

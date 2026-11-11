@@ -23,7 +23,6 @@ import {
 } from './imports.error.js'
 import {
   ACTION_REQUIRED_OUTCOMES,
-  ImportCounts,
   ImportItemOutcome,
   ImportItemResolution,
   ImportItemsFilter,
@@ -160,9 +159,7 @@ class ImportsService {
       importsDao.list(libraryId, page.skip, page.limit),
       importsDao.count(libraryId)
     ])
-    const importsWithCounts = await Promise.all(imports.map(async imported => await this.withCounts(imported)))
-
-    return new CollectionResultObject(importsWithCounts, { ...page, total })
+    return new CollectionResultObject(await this.withCountsMany(imports), { ...page, total })
   }
 
   async get (id: string, userId: string): Promise<SingleResultObject<ImportEntity>> {
@@ -171,7 +168,8 @@ class ImportsService {
 
   async listItems (id: string, userId: string, filter: ImportItemsFilter, page: Page): Promise<CollectionResultObject<ImportItemEntity>> {
     const ownImport = await this.getOwnImport(id, userId)
-    const isbnsInLibrary = await this.findResolvedIsbnsInLibrary(ownImport, await importItemsDao.findAllByImport(id))
+    const unresolvedIsbns = (await importItemsDao.findUnresolvedIsbns([id])).map(row => row.isbn13)
+    const isbnsInLibrary = await this.findIsbnsInLibrary(ownImport, unresolvedIsbns)
 
     const [items, total] = await Promise.all([
       importItemsDao.list(id, filter, [...isbnsInLibrary], page.skip, page.limit),
@@ -200,7 +198,8 @@ class ImportsService {
       throw new ImportNotFoundError('import item not found')
     }
 
-    const isbnsInLibrary = await this.findResolvedIsbnsInLibrary(ownImport, [updatedItem])
+    const candidateIsbns = isPending(updatedItem, new Set()) && updatedItem.isbn13 != null ? [updatedItem.isbn13] : []
+    const isbnsInLibrary = await this.findIsbnsInLibrary(ownImport, candidateIsbns)
     return new SingleResultObject(updatedItem.withPending(isPending(updatedItem, isbnsInLibrary)))
   }
 
@@ -243,38 +242,63 @@ class ImportsService {
     }
   }
 
-  private async findResolvedIsbnsInLibrary (ownImport: ImportEntity, items: readonly ImportItemEntity[]): Promise<ReadonlySet<string>> {
-    const candidates = items
-      .filter(item => isPending(item, new Set()))
-      .map(item => item.isbn13)
-      .filter(isbn13 => isbn13 != null)
-
-    return new Set(await userBooksDao.findIsbn13InLibrary(ownImport.userId, ownImport.libraryId, candidates))
+  /** Which of the given ISBNs are already in the library of the import */
+  private async findIsbnsInLibrary (ownImport: ImportEntity, isbns: readonly string[]): Promise<ReadonlySet<string>> {
+    if (isbns.length === 0) return new Set()
+    return new Set(await userBooksDao.findIsbn13InLibrary(ownImport.userId, ownImport.libraryId, isbns))
   }
 
   private async withCounts (ownImport: ImportEntity): Promise<ImportEntity> {
-    const items = await importItemsDao.findAllByImport(ownImport.id)
-    const isbnsInLibrary = await this.findResolvedIsbnsInLibrary(ownImport, items)
-    const countOutcome = (outcome: ImportItemOutcome): number => items.filter(item => item.outcome === outcome).length
-    const queued = countOutcome(ImportItemOutcome.Queued)
+    const [withCounts] = await this.withCountsMany([ownImport])
+    return withCounts
+  }
 
-    const counts: ImportCounts = {
-      total: items.length,
-      processed: items.length - queued,
-      queued,
-      added: countOutcome(ImportItemOutcome.Added),
-      alreadyInLibrary: countOutcome(ImportItemOutcome.AlreadyInLibrary),
-      duplicateInFile: countOutcome(ImportItemOutcome.DuplicateInFile),
-      notFound: countOutcome(ImportItemOutcome.NotFound),
-      invalidIsbn: countOutcome(ImportItemOutcome.InvalidIsbn),
-      missingIsbn: countOutcome(ImportItemOutcome.MissingIsbn),
-      sourceError: countOutcome(ImportItemOutcome.SourceError),
-      internalError: countOutcome(ImportItemOutcome.InternalError),
-      pending: items.filter(item => isPending(item, isbnsInLibrary)).length,
-      retryable: items.filter(item => RETRYABLE_OUTCOMES.includes(item.outcome) && item.resolution == null).length
+  /** The counts of a page of imports with a fixed number of queries, instead of loading the rows of each one */
+  private async withCountsMany (imports: readonly ImportEntity[]): Promise<ImportEntity[]> {
+    if (imports.length === 0) return []
+    const importIds = imports.map(imported => imported.id)
+
+    const [outcomeCounts, unresolvedIsbns] = await Promise.all([
+      importItemsDao.countByOutcome(importIds),
+      importItemsDao.findUnresolvedIsbns(importIds)
+    ])
+
+    // The imports of a list belong to the same library: its books are checked once for all of them
+    const isbnsInLibraryByLibrary = new Map<string, ReadonlySet<string>>()
+    for (const imported of imports) {
+      if (isbnsInLibraryByLibrary.has(imported.libraryId)) continue
+      const libraryImportIds = new Set(imports.filter(other => other.libraryId === imported.libraryId).map(other => other.id))
+      const isbns = unresolvedIsbns.filter(row => libraryImportIds.has(row.importId)).map(row => row.isbn13)
+      isbnsInLibraryByLibrary.set(imported.libraryId, await this.findIsbnsInLibrary(imported, isbns))
     }
 
-    return ownImport.withCounts(counts)
+    return imports.map(imported => {
+      const counts = outcomeCounts.filter(count => count.importId === imported.id)
+      const isbnsInLibrary = isbnsInLibraryByLibrary.get(imported.libraryId) ?? new Set()
+      const countOutcome = (outcome: ImportItemOutcome): number => counts.find(count => count.outcome === outcome)?.count ?? 0
+      const countUnresolved = (outcomes: readonly ImportItemOutcome[]): number =>
+        counts.filter(count => outcomes.includes(count.outcome)).reduce((sum, count) => sum + count.unresolved, 0)
+      const total = counts.reduce((sum, count) => sum + count.count, 0)
+      const queued = countOutcome(ImportItemOutcome.Queued)
+      // An unresolved row whose book has reached the library another way is no longer pending
+      const resolvedByLibrary = unresolvedIsbns.filter(row => row.importId === imported.id && isbnsInLibrary.has(row.isbn13)).length
+
+      return imported.withCounts({
+        total,
+        processed: total - queued,
+        queued,
+        added: countOutcome(ImportItemOutcome.Added),
+        alreadyInLibrary: countOutcome(ImportItemOutcome.AlreadyInLibrary),
+        duplicateInFile: countOutcome(ImportItemOutcome.DuplicateInFile),
+        notFound: countOutcome(ImportItemOutcome.NotFound),
+        invalidIsbn: countOutcome(ImportItemOutcome.InvalidIsbn),
+        missingIsbn: countOutcome(ImportItemOutcome.MissingIsbn),
+        sourceError: countOutcome(ImportItemOutcome.SourceError),
+        internalError: countOutcome(ImportItemOutcome.InternalError),
+        pending: countUnresolved(ACTION_REQUIRED_OUTCOMES) - resolvedByLibrary,
+        retryable: countUnresolved(RETRYABLE_OUTCOMES)
+      })
+    })
   }
 }
 
