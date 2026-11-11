@@ -2,6 +2,7 @@ import { CollectionResultObject, SingleResultObject, StreamResultObject } from '
 import { Page } from '../../types.js'
 import { LibraryPermissionsError } from '../libraries/libraries.error.js'
 import librariesService from '../libraries/libraries.service.js'
+import librariesDao from '../libraries/libraries.dao.js'
 
 import { DownloadFormat, UpdateUserBook } from './user-books.interfaces.js'
 import userBooksDao from './user-books.dao.js'
@@ -16,23 +17,21 @@ class UserBooksService {
       throw new UserBookPermissionsError('user can only list this own books')
     }
 
-    // TODO: optimize this, we should not fetch all libraries just to check if the user has permissions on the requested ones, we can do a single query to check if the requested libraryIds are valid for the user
-    const libraries = await librariesService.list(userId, { skip: 0, limit: Number.MAX_SAFE_INTEGER })
-    const userLibIds = libraries.entities.map(lib => lib.id)
     if (filter.librariesIds != null) {
-      const hasInvalidLibId = filter.librariesIds.some(libId => !userLibIds.includes(libId))
-      if (hasInvalidLibId) {
+      // A single count checks the ownership of the requested libraries, instead of loading every library of the user
+      const requestedIds = [...new Set(filter.librariesIds)]
+      const ownedCount = await librariesDao.countByIds(requestedIds, userId)
+      if (ownedCount !== requestedIds.length) {
         throw new LibraryPermissionsError('user can only list books from own libraries')
       }
-    } else {
-      filter.librariesIds = userLibIds
     }
 
-    filter.userId = userId
+    // Without libraries, every book of the user that is still in some library
+    const mongoFilter = { ...filter, userId, inAnyLibrary: filter.librariesIds == null }
 
     const [userBooks, total] = await Promise.all([
-      await userBooksDao.list(filter, page.skip, page.limit),
-      await userBooksDao.count(filter)
+      userBooksDao.list(mongoFilter, page.skip, page.limit),
+      userBooksDao.count(mongoFilter)
     ])
 
     const mockPaginationObject = { ...page, total }

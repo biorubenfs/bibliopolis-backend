@@ -16,6 +16,7 @@ const lightningId = '01J9W9PGE06ANTMG3Y24KGCAFF'
 const itNeverHappenedId = '01J9WA3W9TE5NG1H21PTK9VS4Q'
 const solitudeId = '01JBSEARCH0000000000000001'
 const primerId = '01JBSEARCH0000000000000002'
+const removedId = '01JBSEARCH0000000000000003'
 
 // Extra books of user01 in the second library, to search by accented authors, special characters and library
 const extraUserBooks = [
@@ -43,6 +44,22 @@ const extraUserBooks = [
     bookId: '01JBSEARCHB000000000000002',
     bookIsbn13: '9780321714114',
     bookIsbn10: '0321714113',
+    notes: null,
+    rating: null,
+    bookCover: { source: 'open_library', value: null },
+    createdAt: new Date('2000-01-01T00:00:00.000Z'),
+    updatedAt: new Date('2000-01-01T00:00:00.000Z')
+  },
+  // Removed from its last library: it keeps its data but is in no library
+  {
+    _id: removedId,
+    libraries: [],
+    userId: user01Id,
+    bookTitle: 'Removed Primer',
+    bookAuthors: ['Nobody'],
+    bookId: '01JBSEARCHB000000000000003',
+    bookIsbn13: '9780000000002',
+    bookIsbn10: '0000000002',
     notes: null,
     rating: null,
     bookCover: { source: 'open_library', value: null },
@@ -164,6 +181,28 @@ describe('GET /user-books?search', () => {
     const { status } = await listUserBooks({ search: 'never', libraryId: otherUserLibraryId })
 
     expect(status).toBe(403)
+  })
+
+  it('should fail to list a library of another user along with an own one', async () => {
+    const { status } = await listUserBooks({ libraryId: [firstLibraryId, otherUserLibraryId] })
+
+    expect(status).toBe(403)
+  })
+
+  it('should accept the same library repeated in the filter', async () => {
+    const { status, body } = await listUserBooks({ search: 'primer', libraryId: [secondLibraryId, secondLibraryId] })
+
+    expect(status).toBe(200)
+    expect(ids(body)).toEqual([primerId])
+  })
+
+  it('should not list books removed from all their libraries', async () => {
+    const all = await listUserBooks({})
+    const searched = await listUserBooks({ search: 'primer' })
+
+    expect(ids(all.body)).not.toContain(removedId)
+    expect(ids(searched.body)).toEqual([primerId])
+    expect(searched.body.paginationInfo.total).toBe(1)
   })
 
   it('should count only the matches and paginate them without repeating books', async () => {
