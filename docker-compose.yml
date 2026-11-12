@@ -1,6 +1,6 @@
 services:
   app:
-    image: ghcr.io/biorubenfs/bibliopolis-backend:latest
+    image: ghcr.io/biorubenfs/bibliopolis-backend:${BACKEND_TAG:?BACKEND_TAG no definido en .env}
     restart: unless-stopped
     env_file:
       - .env

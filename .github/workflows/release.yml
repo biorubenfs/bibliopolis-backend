@@ -1,0 +1,104 @@
+name: Release
+
+# Se lanza a mano y solo desde main. Sube la versión del package.json (commit + tag vX.Y.Z),
+# publica la imagen en GHCR con las etiquetas X.Y.Z, X.Y y latest, crea la GitHub Release
+# y despliega esa versión en el entorno de producción del VPS.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Tipo de versión'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://bibliopolis.es
+
+    steps:
+      - name: Only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::La release solo puede lanzarse desde main (ref actual: ${{ github.ref }})"
+          exit 1
+
+      - uses: actions/checkout@v5
+
+      - name: Bump version
+        id: version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version ${{ inputs.bump }} -m "chore: release v%s"
+          echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
+            type=raw,value=latest
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Solo se publican el commit y el tag si la imagen ya está en GHCR: un build roto no deja un tag sin imagen.
+      - name: Push commit and tag
+        run: git push --follow-tags
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          generate_release_notes: true
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to production
+        run: |
+          ssh -i ~/.ssh/id_rsa ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "BACKEND_TAG='${{ steps.version.outputs.version }}' DEPLOY_PATH='${{ secrets.VPS_PATH }}' COMPOSE_ENV=prod bash -s" << 'EOF'
+            set -e
+            cd "$DEPLOY_PATH"
+            if grep -q '^BACKEND_TAG=' .env; then
+              sed -i "s/^BACKEND_TAG=.*/BACKEND_TAG=$BACKEND_TAG/" .env
+            else
+              echo "BACKEND_TAG=$BACKEND_TAG" >> .env
+            fi
+            docker compose -f docker-compose.yml -f "docker-compose.$COMPOSE_ENV.yml" up -d --pull always
+          EOF
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_rsa
