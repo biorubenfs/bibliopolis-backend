@@ -27,19 +27,21 @@ class UsersDao extends Dao<DBUser> {
   async init (): Promise<void> {
     await this.collection.createIndex({ email: 1 }, { unique: true })
 
+    const email = config.defaultAdmin.email.trim().toLowerCase()
+    // By email only: it is unique, so a user with that email blocks the creation whatever its name
+    const current = await this.collection.findOne({ email })
+    if (current != null) {
+      return
+    }
+
     const now = new Date()
     const defaultAdmin = {
       name: config.defaultAdmin.name,
-      email: config.defaultAdmin.email.trim().toLowerCase(),
+      email,
       avatar: '',
-      password: bcrypt.hashSync(config.defaultAdmin.password, config.hashRounds),
+      password: await bcrypt.hash(config.defaultAdmin.password, config.hashRounds),
       createdAt: now,
       updatedAt: now
-    }
-    // By email only: it is unique, so a user with that email blocks the creation whatever its name
-    const current = await this.collection.findOne({ email: defaultAdmin.email })
-    if (current != null) {
-      return
     }
     await this.create(defaultAdmin, Role.Admin)
   }

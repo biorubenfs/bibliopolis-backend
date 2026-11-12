@@ -65,7 +65,8 @@ describe('books tests', async () => {
     expect(body.paginationInfo.skip).to.be.a('number').equals(skip)
     expect(body.paginationInfo.total).to.be.a('number').equals(12)
 
+    // Newest first by id: the second newest book of the test data
     const firstBook = body.results.at(0).attributes
-    expect(firstBook).to.have.property('title').equals('Rossiya')
+    expect(firstBook).to.have.property('title').equals('Eyewitness to History')
   })
 })

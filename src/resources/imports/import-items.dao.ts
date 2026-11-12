@@ -8,8 +8,10 @@ import {
   ImportItemOutcome,
   ImportItemResolution,
   ImportItemsFilter,
+  ImportOutcomeCount,
   NewImportItem,
-  RETRYABLE_OUTCOMES
+  RETRYABLE_OUTCOMES,
+  UnresolvedIsbn
 } from './imports.interfaces.js'
 
 function dbImportItemToEntity (dbItem: DBImportItem | null): ImportItemEntity | null {
@@ -68,9 +70,29 @@ class ImportItemsDao extends Dao<DBImportItem> {
     ))
   }
 
-  async findAllByImport (importId: string): Promise<ImportItemEntity[]> {
-    const dbItems = await this.collection.find({ importId }).toArray()
-    return dbItems.map(dbItem => new ImportItemEntity(dbItem))
+  /** How many rows of each outcome has each import, and how many of them nobody has resolved. Counted in the database. */
+  async countByOutcome (importIds: readonly string[]): Promise<ImportOutcomeCount[]> {
+    return await this.collection.aggregate<ImportOutcomeCount>([
+      { $match: { importId: { $in: [...importIds] } } },
+      {
+        $group: {
+          _id: { importId: '$importId', outcome: '$outcome' },
+          count: { $sum: 1 },
+          unresolved: { $sum: { $cond: [{ $eq: ['$resolution', null] }, 1, 0] } }
+        }
+      },
+      { $project: { _id: 0, importId: '$_id.importId', outcome: '$_id.outcome', count: 1, unresolved: 1 } }
+    ]).toArray()
+  }
+
+  /** The ISBNs of the unresolved rows that require action: they are pending unless the book has reached the library */
+  async findUnresolvedIsbns (importIds: readonly string[]): Promise<UnresolvedIsbn[]> {
+    return await this.collection
+      .find(
+        { importId: { $in: [...importIds] }, outcome: { $in: [...ACTION_REQUIRED_OUTCOMES] }, resolution: null, isbn13: { $ne: null } },
+        { projection: { _id: 0, importId: 1, isbn13: 1 } }
+      )
+      .toArray() as UnresolvedIsbn[]
   }
 
   async list (importId: string, filter: ImportItemsFilter, isbnsInLibrary: readonly string[], skip: number, limit: number): Promise<ImportItemEntity[]> {

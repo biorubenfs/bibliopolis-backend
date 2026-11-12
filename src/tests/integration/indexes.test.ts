@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { MongoServerError } from 'mongodb'
+import { Document, MongoServerError } from 'mongodb'
 import { ulid } from 'ulid'
 import testUtils from '../utils/utils.js'
 import { DataSetType, loadDataInDb, MockDataSet } from '../../load-data.js'
@@ -14,11 +14,24 @@ import { BooksSource } from '../../resources/sources/sources.types.js'
 import { DBUserBook } from '../../resources/user-books/user-books.interfaces.js'
 
 const booksUrl = new URL('/books', testUtils.TESTS_BASE_URL)
+const user01Id = '01J9BHWZ8N4B1JBSAFCBKQGERS'
+const firstLibraryId = '01J9W8VR2CFZW8PJ1Q8Y4Y5WEX'
 const authHeader = testUtils.buildAuthorizationHeader(makeJwt('01J9BK7YX0D5NHHBN70Q4N7P69', Role.Admin))
 
 const EXISTING_ISBN13 = '9781732539419'
 const NEW_ISBN13_WITHOUT_ISBN10 = ['9791300000012', '9791300000029']
 const NEW_ISBN13 = '9780000001115'
+
+/** The stages of the winning plan, from the first one executed, e.g. ['IXSCAN', 'FETCH', 'SORT'] */
+function planStages (plan: Document): string[] {
+  const stages: string[] = []
+  let stage = plan.queryPlanner.winningPlan.queryPlan ?? plan.queryPlanner.winningPlan
+  while (stage != null) {
+    stages.unshift(stage.stage)
+    stage = stage.inputStage
+  }
+  return stages
+}
 
 async function postBook (isbn13: string, title = 'A book'): Promise<Response> {
   return await fetch(booksUrl, {
@@ -62,6 +75,12 @@ describe('books indexes', () => {
     expect(await booksDao.collection.countDocuments({ isbn13: NEW_ISBN13 })).toBe(1)
   })
 
+  it('should list the books from the _id index, without sorting in memory', async () => {
+    const plan = await booksDao.collection.find({}).sort({ _id: -1 }).limit(10).explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+  })
+
   it('should use the indexes to find a book by isbn13 or isbn10', async () => {
     const plan = await booksDao.collection
       .find({ $or: [{ isbn13: '0000000000' }, { isbn10: '0000000000' }] })
@@ -92,6 +111,34 @@ describe('ensureBookExistsInBooks', () => {
 })
 
 describe('user books indexes', () => {
+  it('should list the books of a user from an index, without sorting in memory', async () => {
+    const plan = await userBooksDao.collection
+      .find({ userId: user01Id, 'libraries.0': { $exists: true } })
+      .sort({ _id: -1 })
+      .limit(10)
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+  })
+
+  it('should list the books of a library from an index, without sorting in memory', async () => {
+    const plan = await userBooksDao.collection
+      .find({ userId: user01Id, libraries: { $in: [firstLibraryId] } })
+      .sort({ _id: -1 })
+      .limit(10)
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+    expect(plan.executionStats.totalKeysExamined).toBe(plan.executionStats.nReturned)
+  })
+
+  it('should find the user books of a book by index', async () => {
+    const plan = await userBooksDao.collection.find({ bookId: '0000000000' }).explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
+    expect(plan.executionStats.totalDocsExamined).toBe(0)
+  })
+
   it('should not allow a user to own the same book twice', async () => {
     const userBook = { userId: ulid(), bookId: ulid(), libraries: [] } as unknown as Omit<DBUserBook, '_id'>
 
