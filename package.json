@@ -17,9 +17,6 @@
     "test:integration": "ENVIRONMENT='test' vitest run --config=vitest.config.integration.ts --pool=forks --reporter=verbose",
     "test:integration:dev": "pnpm run --silent build && ENVIRONMENT='test' vitest run --config=vitest.config.integration.ts --pool=forks --reporter=verbose",
     "test:coverage": "ENVIRONMENT='test' vitest run --coverage",
-    "version:patch": "pnpm version patch",
-    "version:minor": "pnpm version minor",
-    "version:major": "pnpm version major",
     "docs:dev": "mkdocs serve -a 127.0.0.1:8001"
   },
   "type": "module",
