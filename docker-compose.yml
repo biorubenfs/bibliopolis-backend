@@ -4,6 +4,9 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    # Overrides a PORT in the .env: the overrides publish host:3000, so the app must listen there
+    environment:
+      PORT: 3000
     deploy:
       resources:
         limits:
