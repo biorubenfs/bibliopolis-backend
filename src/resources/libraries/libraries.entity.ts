@@ -3,7 +3,7 @@ import { DBLibrary } from './libraries.interfaces.js'
 
 export class LibraryEntity extends Entity<EntityType.Libraries> {
   readonly name: string
-  readonly description: string
+  readonly description: string | null
   readonly userId: string
   readonly books: string[]
   readonly isFavorite: boolean

@@ -77,7 +77,7 @@ async function createImport (form: ImportForm): Promise<string> {
 }
 
 async function createEmptyLibrary (name: string, userId = USER_ID): Promise<string> {
-  return (await librariesDao.create({ name, description: '' }, userId)).id
+  return (await librariesDao.create({ name, description: null }, userId)).id
 }
 
 type SourceResponse = (isbn: string) => Response | Promise<Response>
