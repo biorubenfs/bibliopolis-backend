@@ -17,7 +17,7 @@
   {
     "_id": "01J9W8VR2CFZW8PJ1Q8Y4Y5WEZ",
     "name": "sample second library",
-    "description": "description of the sample second library",
+    "description": null,
     "books": [],
     "isFavorite": false,
     "tagIds": [],

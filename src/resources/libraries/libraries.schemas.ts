@@ -9,7 +9,11 @@ const tagIdsSchema = z.array(z.string().ulid())
 
 export const newLibrarySchema = z.object({
   name: z.string().trim().min(3).max(50),
-  description: z.string().trim().max(100),
+  // Optional: a missing or blank description is stored as null. null in a PATCH removes it
+  description: z.string().trim().max(100)
+    .transform(value => value === '' ? null : value)
+    .nullable()
+    .optional(),
   // Optional and without a default: a default would also apply to PATCH bodies derived with
   // partial(), and editing only the name would remove the tags
   tagIds: tagIdsSchema.optional()

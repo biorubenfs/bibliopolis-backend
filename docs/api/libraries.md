@@ -9,7 +9,7 @@ Atributos de una biblioteca:
 | Campo         | Tipo     | Descripción                                    |
 | ------------- | -------- | ---------------------------------------------- |
 | `name`        | string   | Nombre de la biblioteca                        |
-| `description` | string   | Descripción de la biblioteca                   |
+| `description` | string \| null | Descripción de la biblioteca, o `null` si no tiene |
 | `userId`      | string   | ID del usuario propietario                     |
 | `books`       | string[] | IDs de los user books que contiene             |
 | `isFavorite`  | boolean  | Si el usuario la ha marcado como favorita      |
@@ -34,10 +34,10 @@ Crea una nueva biblioteca para el usuario autenticado.
 | Campo         | Tipo     | Requerido | Descripción                                        |
 | ------------- | -------- | --------- | -------------------------------------------------- |
 | `name`        | string   | Sí        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
-| `description` | string   | Sí        | Descripción de la biblioteca (máx. 100 caracteres) |
+| `description` | string \| null | No        | Descripción de la biblioteca (máx. 100 caracteres). Si no se envía, o está vacía, se guarda `null` |
 | `tagIds`      | string[] | No        | IDs de etiquetas del usuario o globales: hasta 5, sin repetir. Si no se envía, la biblioteca se crea sin etiquetas |
 
-Se eliminan los espacios al principio y al final de ambos campos.
+Se eliminan los espacios al principio y al final de `name` y `description`.
 
 Una biblioteca nueva nunca es favorita: `isFavorite` se ignora si se envía y solo se cambia con [`PATCH /libraries/:id`](#patch-librariesid).
 
@@ -259,7 +259,7 @@ Todos los campos son opcionales; solo se modifican los que se envían.
 | Campo         | Tipo     | Requerido | Descripción                                        |
 | ------------- | -------- | --------- | -------------------------------------------------- |
 | `name`        | string   | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
-| `description` | string   | No        | Descripción de la biblioteca (máx. 100 caracteres) |
+| `description` | string \| null | No        | Descripción de la biblioteca (máx. 100 caracteres). `null` o una cadena vacía la quitan |
 | `isFavorite`  | boolean  | No        | Marca (`true`) o desmarca (`false`) la biblioteca como favorita |
 | `tagIds`      | string[] | No        | **Sustituye** todas las etiquetas de la biblioteca (`[]` las quita). Hasta 5, sin repetir, del propietario de la biblioteca o globales |
 

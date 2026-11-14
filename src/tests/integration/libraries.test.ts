@@ -170,6 +170,57 @@ describe('libraries CRUD basic tests', async () => {
     expect(response.status).equals(201)
   })
 
+  async function sendLibrary (method: 'POST' | 'PATCH', body: object, id?: string): Promise<{ status: number, body: any }> {
+    const url = new URL(id == null ? '/libraries' : `/libraries/${id}`, testUtils.TESTS_BASE_URL)
+    const response = await fetch(url, {
+      headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+      method,
+      body: JSON.stringify(body)
+    })
+    return { status: response.status, body: await response.json() }
+  }
+
+  it('POST /libraries - should store a null description when it is not sent', async () => {
+    const { status, body } = await sendLibrary('POST', { name: 'library without description' })
+
+    expect(status).equals(201)
+    expect(body.results.attributes.description).toBeNull()
+    const library = await librariesDao.findById(body.results.id)
+    expect(library?.description).toBeNull()
+  })
+
+  it('POST /libraries - should store a blank description as null', async () => {
+    const { status, body } = await sendLibrary('POST', { name: 'library with blank description', description: '   ' })
+
+    expect(status).equals(201)
+    expect(body.results.attributes.description).toBeNull()
+  })
+
+  it('POST /libraries - should accept a null description', async () => {
+    const { status, body } = await sendLibrary('POST', { name: 'library with null description', description: null })
+
+    expect(status).equals(201)
+    expect(body.results.attributes.description).toBeNull()
+  })
+
+  it('PATCH /libraries/:id - should remove the description with null', async () => {
+    const created = await sendLibrary('POST', { name: 'library to clear', description: 'to be removed' })
+    const { status, body } = await sendLibrary('PATCH', { description: null }, created.body.results.id)
+
+    expect(status).equals(200)
+    expect(body.results.attributes.description).toBeNull()
+    const library = await librariesDao.findById(created.body.results.id)
+    expect(library?.description).toBeNull()
+  })
+
+  it('PATCH /libraries/:id - should keep the description when only the name is sent', async () => {
+    const created = await sendLibrary('POST', { name: 'library to rename', description: 'kept description' })
+    const { status, body } = await sendLibrary('PATCH', { name: 'renamed library' }, created.body.results.id)
+
+    expect(status).equals(200)
+    expect(body.results.attributes.description).equals('kept description')
+  })
+
   it('POST /libraries - should fail to create a library with existing name', async () => {
     const body = { name: 'sample first library', description: 'description of the sample first library' }
     const response = await fetch(librariesUrl, {

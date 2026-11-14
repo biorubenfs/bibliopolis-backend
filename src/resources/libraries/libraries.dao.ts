@@ -42,7 +42,7 @@ class LibrariesDao extends Dao<DBLibrary> {
     const now = new Date()
     const dbLibrary: DBLibrary = {
       name: newLibrary.name,
-      description: newLibrary.description,
+      description: newLibrary.description ?? null,
       _id: ulid(),
       books: [],
       isFavorite: false,
