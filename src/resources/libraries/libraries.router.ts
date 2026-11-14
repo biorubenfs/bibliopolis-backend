@@ -23,8 +23,8 @@ librariesRouter.get('/:id', handler(async (req) => {
 
 librariesRouter.get('/', queryParamsValidator(librariesQuerySchema), queryPaginationValidator, handler(async (req) => {
   // already validated by queryParamsValidator, parsed again to apply the trim
-  const { search, favorites, tags } = librariesQuerySchema.parse(req.query)
-  const result = await librariesService.list(req.userId ?? '', parseSkipLimitQP(req), { search, favorites, tagIds: tags })
+  const { ids, search, favorites, tags } = librariesQuerySchema.parse(req.query)
+  const result = await librariesService.list(req.userId ?? '', parseSkipLimitQP(req), { ids, search, favorites, tagIds: tags })
   return { status: HttpStatusCode.OK, data: result }
 }))
 

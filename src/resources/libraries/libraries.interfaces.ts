@@ -6,6 +6,7 @@ export type NewLibrary = z.infer<typeof newLibrarySchema>
 export type UpdateLibrary = z.infer<typeof updateLibrarySchema>
 
 export interface LibrariesListFilter {
+  ids?: readonly string[]
   search?: string
   favorites?: boolean
   tagIds?: readonly string[]

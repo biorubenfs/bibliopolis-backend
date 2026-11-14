@@ -10,9 +10,10 @@ function dbLibraryToEntity (dbLibrary: DBLibrary | null): LibraryEntity | null {
 }
 
 function listLibrariesMongoFilter (userId: string, filter: LibrariesListFilter): Filter<DBLibrary> {
-  const { search, favorites, tagIds } = filter
+  const { ids, search, favorites, tagIds } = filter
   const mongoFilter: Filter<DBLibrary> = {
     userId,
+    ...(ids != null && ids.length > 0 ? { _id: { $in: [...ids] } } : {}),
     ...(favorites === true ? { isFavorite: true } : {}),
     ...(tagIds != null && tagIds.length > 0 ? { tagIds: { $all: [...tagIds] } } : {})
   }
