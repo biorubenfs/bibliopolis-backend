@@ -170,10 +170,11 @@ La biblioteca no existe.
 
 ## GET /libraries
 
-Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtros de favoritas y de etiquetas.
+Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro de cada grupo, por fecha de creación. Admite [paginación](../index.md#paginacion), búsqueda de texto y filtros por ID, de favoritas y de etiquetas.
 
 ### Query Params
 
+- `ids`: string (opcional) — IDs de bibliotecas separados por comas, hasta 100 (`ids=<id1>,<id2>`). Devuelve solo esas bibliotecas, en el orden habitual del listado. Sirve para resolver de una vez las bibliotecas de un user book (campo `libraries`). Se combina con el resto de filtros; un valor vacío o repetido se ignora, y un ID inexistente o de otro usuario simplemente no aparece
 - `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre o descripción contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No distingue mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
 - `favorites`: `true` (opcional) — Devuelve solo las favoritas. No admite otro valor: para no filtrar, se omite. Se combina con `search`, y el `total` de `paginationInfo` cuenta solo las que coinciden
 - `tags`: string (opcional) — IDs de etiquetas separados por comas, hasta 5 (`tags=<id1>,<id2>`). Devuelve las bibliotecas que tienen **todas** esas etiquetas. Se combina con `search` y `favorites`; un valor vacío se ignora, y un ID inexistente o de otro usuario da 0 resultados
@@ -216,7 +217,7 @@ Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro d
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres, `favorites` con un valor distinto de `true`, o `tags` repetido, con más de 5 IDs o con un ID mal formado.
+Parámetros de paginación no válidos, `ids` repetido, con más de 100 IDs o con un ID mal formado, `search` repetido o con más de 100 caracteres, `favorites` con un valor distinto de `true`, o `tags` repetido, con más de 5 IDs o con un ID mal formado.
 
 ```json
 {

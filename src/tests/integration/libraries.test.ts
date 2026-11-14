@@ -9,10 +9,16 @@ import importsDao from '../../resources/imports/imports.dao.js'
 import importItemsDao from '../../resources/imports/import-items.dao.js'
 import { ImportItemOutcome, ImportStatus } from '../../resources/imports/imports.interfaces.js'
 import { ApiRestErrorCode } from '../../error/types.js'
+import { ulid } from 'ulid'
 
 const librariesUrl = new URL('/libraries', testUtils.TESTS_BASE_URL)
 const userBooksUrl = new URL('/user-books', testUtils.TESTS_BASE_URL)
 const userId = '01J9BHWZ8N4B1JBSAFCBKQGERS'
+// Fixture libraries: the first three belong to user01, sorted by id in the listing
+const firstLibraryId = '01J9W8VR2CFZW8PJ1Q8Y4Y5WEX'
+const secondLibraryId = '01J9W8VR2CFZW8PJ1Q8Y4Y5WEZ'
+const thirdLibraryId = '01J9W8VR2CFZW8PJ1Q8Y4Y5WFA'
+const otherUserLibraryId = '01J9XDD1NAFHP0159FYT245D8X'
 const userEmail = 'user01@email.com'
 const userPassword = 'Password123!'
 
@@ -151,6 +157,54 @@ describe('libraries CRUD basic tests', async () => {
 
   it('GET /libraries?search - should fail with a search longer than 100 characters', async () => {
     const { status, body } = await listLibraries({ search: 'a'.repeat(101) })
+
+    expect(status).equals(400)
+    expect(body.errorCode).equals(ApiRestErrorCode.ValidationError)
+  })
+
+  it('GET /libraries?ids - should return only the given libraries', async () => {
+    const { status, body } = await listLibraries({ ids: `${thirdLibraryId},${firstLibraryId}` })
+
+    expect(status).equals(200)
+    expect(body.results.map((result: any) => result.id)).toEqual([firstLibraryId, thirdLibraryId])
+    expect(body.paginationInfo.total).equals(2)
+  })
+
+  it('GET /libraries?ids - should leave out unknown ids and libraries of other users', async () => {
+    const { status, body } = await listLibraries({ ids: `${secondLibraryId},${otherUserLibraryId},${ulid()}` })
+
+    expect(status).equals(200)
+    expect(body.results.map((result: any) => result.id)).toEqual([secondLibraryId])
+    expect(body.paginationInfo.total).equals(1)
+  })
+
+  it('GET /libraries?ids - should combine with search', async () => {
+    const { status, body } = await listLibraries({ ids: `${firstLibraryId},${secondLibraryId}`, search: 'second' })
+
+    expect(status).equals(200)
+    expect(body.results.map((result: any) => result.id)).toEqual([secondLibraryId])
+  })
+
+  it('GET /libraries?ids - should ignore blank and repeated ids', async () => {
+    const { status, body } = await listLibraries({ ids: ` ${firstLibraryId} ,,${firstLibraryId}, ` })
+
+    expect(status).equals(200)
+    expect(body.results.map((result: any) => result.id)).toEqual([firstLibraryId])
+  })
+
+  it('GET /libraries?ids - should ignore an empty value', async () => {
+    const { status, body } = await listLibraries({ ids: '' })
+
+    expect(status).equals(200)
+    expect(body.results.length).equals(3)
+  })
+
+  it.each([
+    ['an invalid id', { ids: 'not-an-id' }],
+    ['more than 100 ids', { ids: Array.from({ length: 101 }, () => ulid()).join(',') }],
+    ['a repeated param', { ids: [firstLibraryId, secondLibraryId] }]
+  ])('GET /libraries?ids - should fail with %s', async (_case, query) => {
+    const { status, body } = await listLibraries(query)
 
     expect(status).equals(400)
     expect(body.errorCode).equals(ApiRestErrorCode.ValidationError)

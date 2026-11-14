@@ -24,7 +24,15 @@ export const updateLibrarySchema = newLibrarySchema.partial().extend({
   isFavorite: z.boolean().optional()
 })
 
+/** As many IDs as a page can hold: the filter is meant to resolve a known set of libraries in one request */
+const MAX_IDS_FILTER = 100
+
 export const librariesQuerySchema = z.object({
+  ids: z.string()
+    // Comma-separated library IDs; duplicates are dropped so they do not count towards the limit
+    .transform(value => [...new Set(value.split(',').map(id => id.trim()).filter(id => id !== ''))])
+    .pipe(z.array(z.string().ulid()).max(MAX_IDS_FILTER))
+    .optional(),
   search: z.string().trim().max(100).optional(),
   // Only "true" is accepted: "false" would be ambiguous (non-favorites or no filter)
   favorites: z.literal('true').transform(() => true).optional(),
