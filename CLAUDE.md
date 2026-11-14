@@ -25,14 +25,14 @@ pnpm run docs:dev         # mkdocs serve en http://127.0.0.1:8001 (el 8000 lo oc
 mkdocs build --strict     # comprueba la documentación (falla con enlaces rotos o páginas fuera del nav)
 ```
 
-Ejecutar un único fichero de test / un único test (los scripts `test*` establecen `ENVIRONMENT=test` y `JWT_ACCESS_TOKEN_SECRET=test`, que son obligatorios):
+Ejecutar un único fichero de test / un único test (los scripts `test*` establecen `ENVIRONMENT=test`, con lo que `src/config.ts` lee `.env.test` en lugar de `.env`; ese fichero está en git y lleva el secreto JWT y el admin por defecto de los tests):
 
 ```bash
 pnpm run test:integration src/tests/integration/libraries.test.ts
 pnpm run test:integration -t "should list user libraries"
 ```
 
-El desarrollo local necesita un **replica set** de MongoDB (se usan transacciones); ver README.md para la configuración con docker-compose de un `rs0` de un solo nodo. Cadena de conexión: `mongodb://localhost:27018/bibliopolis`. Copiar `.env.example` a `.env`; toda la configuración se lee en `src/config.ts`.
+El desarrollo local necesita un **replica set** de MongoDB (se usan transacciones); ver README.md para la configuración con docker-compose de un `rs0` de un solo nodo. Cadena de conexión: `mongodb://localhost:27018/bibliopolis`. Copiar `.env.example` a `.env`; toda la configuración se lee en `src/config.ts`, que la valida con zod al arrancar: si falta una variable obligatoria (`MONGO_URI`, `DEFAULT_ADMIN_*`, `JWT_ACCESS_TOKEN_SECRET`) o un valor no es válido, la app termina con código 1 listando todos los problemas. Las variables vacías cuentan como ausentes. Al añadir una variable nueva, añadirla al esquema, a `.env.example` y, si los tests la necesitan, a `.env.test`.
 
 ## Estilo de código
 
