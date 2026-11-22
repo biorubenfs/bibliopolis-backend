@@ -1,5 +1,4 @@
-// Limits while the feature is being tested
-export const MAX_IMPORT_ROWS = 200
+// The row limit is configurable: config.imports.maxRows (IMPORT_MAX_ROWS)
 export const MAX_IMPORT_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 // Courtesy with the external sources: wait after each search that reaches them

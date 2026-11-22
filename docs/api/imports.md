@@ -66,7 +66,7 @@ Una fila está **pendiente** si requiere acción, su `resolution` es `null` y su
 
 ## Formato del fichero
 
-- Límites: **200 filas** sin contar la cabecera ni las filas vacías, y **5 MB**.
+- Límites: **500 filas** sin contar la cabecera ni las filas vacías (configurable con la variable de entorno `IMPORT_MAX_ROWS`), y **5 MB**.
 - Codificación: UTF-8, con o sin BOM, o windows-1252.
 - Separador: `,`, `;` o tabulador. Se detecta en la cabecera.
 - La primera fila no vacía es siempre la cabecera. No se admiten ficheros sin cabecera.
