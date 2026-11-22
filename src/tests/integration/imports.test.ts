@@ -6,7 +6,7 @@ import mongo from '../../mongo.js'
 import { makeJwt } from '../../resources/auth/auth.utils.js'
 import booksDao from '../../resources/books/books.dao.js'
 import importItemsDao from '../../resources/imports/import-items.dao.js'
-import { MAX_IMPORT_FILE_SIZE_BYTES, MAX_IMPORT_ROWS } from '../../resources/imports/imports.constants.js'
+import { MAX_IMPORT_FILE_SIZE_BYTES } from '../../resources/imports/imports.constants.js'
 import importsDao from '../../resources/imports/imports.dao.js'
 import { DBImportItem, ImportItemOutcome, ImportStatus } from '../../resources/imports/imports.interfaces.js'
 import { ImportsWorker } from '../../resources/imports/imports.worker.js'
@@ -210,7 +210,7 @@ describe('POST /imports?dryRun=true', () => {
 })
 
 describe('POST /imports validation', () => {
-  const tooManyRows = csvOf(...Array.from({ length: MAX_IMPORT_ROWS + 1 }, () => ISBN_NEW))
+  const tooManyRows = csvOf(...Array.from({ length: config.imports.maxRows + 1 }, () => ISBN_NEW))
 
   it.each([true, false])('should apply the same file validations with dryRun=%s', async (dryRun) => {
     const missingFile = await postImport({ libraryId: LIBRARY_ID }, { dryRun })
@@ -228,7 +228,7 @@ describe('POST /imports validation', () => {
     const rows = await postImport({ csv: tooManyRows, libraryId: LIBRARY_ID }, { dryRun })
     expect(rows.status).toBe(400)
     expect(rows.body.errorCode).toBe(ApiRestErrorCode.ImportTooManyRows)
-    expect(rows.body.message).toContain(String(MAX_IMPORT_ROWS))
+    expect(rows.body.message).toContain(String(config.imports.maxRows))
   })
 
   it('should answer 413 when the file exceeds the size limit', async () => {

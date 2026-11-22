@@ -1,3 +1,4 @@
+import config from '../../config.js'
 import { CollectionResultObject, MiscResultObject, SingleResultObject } from '../../results.js'
 import { runInTransaction } from '../../transaction-helper.js'
 import { Page } from '../../types.js'
@@ -7,7 +8,7 @@ import { LibraryEntity } from '../libraries/libraries.entity.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import importItemsDao from './import-items.dao.js'
 import { ImportItemEntity } from './import-items.entity.js'
-import { ANALYSIS_SAMPLE_ROWS, MAX_FILE_NAME_LENGTH, MAX_IMPORT_ROWS } from './imports.constants.js'
+import { ANALYSIS_SAMPLE_ROWS, MAX_FILE_NAME_LENGTH } from './imports.constants.js'
 import importsDao from './imports.dao.js'
 import { ImportEntity } from './imports.entity.js'
 import {
@@ -78,8 +79,9 @@ class ImportsService {
 
     const csv = readFile(file)
 
-    if (csv.rows.length > MAX_IMPORT_ROWS) {
-      throw new ImportTooManyRowsError(`the file has ${csv.rows.length} rows and the limit is ${MAX_IMPORT_ROWS}`)
+    const maxRows = config.imports.maxRows
+    if (csv.rows.length > maxRows) {
+      throw new ImportTooManyRowsError(`the file has ${csv.rows.length} rows and the limit is ${maxRows}`)
     }
 
     const invalidColumn = request.isbnColumns?.find(column => column >= csv.columns.length)

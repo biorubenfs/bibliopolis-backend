@@ -40,6 +40,7 @@ const envSchema = z.object({
   GOOGLE_BOOKS_COVER_URL_PATTERN: z.string().default('http://books.google.com/books/content?id=:id&printsec=frontcover&img=1&zoom=:size'),
   GOOGLE_BOOKS_API_KEY: z.string().default(''),
   ROBO_HASH_API_BASE_URL: z.string().url().default('https://robohash.org/'),
+  IMPORT_MAX_ROWS: z.coerce.number().int().min(1).default(500),
   DEBUG_STACK_TRACE: z.enum(['true', 'false']).default('false')
 })
 
@@ -75,6 +76,7 @@ export interface Config {
   openLibrary: { domain: URL, coverUrlPattern: string }
   googleBooks: { domain: URL, coverUrlPattern: string, apiKey: string }
   roboHashApi: { baseUrl: URL }
+  imports: { maxRows: number }
   debug: { stackTrace: boolean }
 }
 
@@ -120,6 +122,9 @@ function buildConfig (env: Env): Config {
     },
     roboHashApi: {
       baseUrl: new URL(env.ROBO_HASH_API_BASE_URL)
+    },
+    imports: {
+      maxRows: env.IMPORT_MAX_ROWS
     },
     debug: {
       stackTrace: env.DEBUG_STACK_TRACE === 'true'

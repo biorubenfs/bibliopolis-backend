@@ -38,6 +38,17 @@ describe('loadConfig', () => {
     expect(config.debug.stackTrace).equals(true)
   })
 
+  it('should read IMPORT_MAX_ROWS', () => {
+    expect(loadConfig({ ...validEnv, IMPORT_MAX_ROWS: '1000' }).imports.maxRows).equals(1000)
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['empty', '   ']
+  ])('should default IMPORT_MAX_ROWS to 500 when it is %s', (_name, value) => {
+    expect(loadConfig({ ...validEnv, IMPORT_MAX_ROWS: value }).imports.maxRows).equals(500)
+  })
+
   it('should apply the defaults when optional variables are missing', () => {
     const config = loadConfig({ ...validEnv, ENVIRONMENT: undefined, CORS_ORIGIN: undefined })
 
@@ -72,6 +83,9 @@ describe('loadConfig', () => {
     ['an invalid admin email', { DEFAULT_ADMIN_EMAIL: 'not-an-email' }, 'DEFAULT_ADMIN_EMAIL'],
     ['an invalid URL', { OPEN_LIBRARY_DOMAIN: 'openlibrary.org' }, 'OPEN_LIBRARY_DOMAIN'],
     ['HASH_ROUNDS below the minimum', { HASH_ROUNDS: '2' }, 'HASH_ROUNDS'],
+    ['a non numeric IMPORT_MAX_ROWS', { IMPORT_MAX_ROWS: 'many' }, 'IMPORT_MAX_ROWS'],
+    ['an IMPORT_MAX_ROWS below 1', { IMPORT_MAX_ROWS: '0' }, 'IMPORT_MAX_ROWS'],
+    ['a decimal IMPORT_MAX_ROWS', { IMPORT_MAX_ROWS: '10.5' }, 'IMPORT_MAX_ROWS'],
     ['an invalid DEBUG_STACK_TRACE', { DEBUG_STACK_TRACE: 'yes' }, 'DEBUG_STACK_TRACE']
   ])('should reject %s', (_name, overrides, variable) => {
     expect(issuesOf({ ...validEnv, ...overrides })).toEqual([variable])
