@@ -110,5 +110,30 @@ describe('isbn tests', () => {
       expect(result.isbn10).toBe(isbn10)
       expect(result.isbn13).toBe(isbn13)
     })
+    it('should say that the isbns are not compatible if both provided and they belong to different books', () => {
+      expect(() => ISBNUtils.calculateIsbns('0380708957', '9788415509790')).toThrow('isbn10 and isbn13 are not compatible')
+    })
+    it('should say that the isbns are not compatible if the isbn13 has prefix 979', () => {
+      expect(() => ISBNUtils.calculateIsbns('8415509790', '9791034902309')).toThrow('isbn10 and isbn13 are not compatible')
+    })
+  })
+
+  describe('isbn compatibility', () => {
+    it('should accept an isbn10 and the isbn13 of the same book', () => {
+      expect(ISBNUtils.areCompatibleIsbns('8415509790', '9788415509790')).toBe(true)
+    })
+    it('should ignore hyphens and spaces', () => {
+      expect(ISBNUtils.areCompatibleIsbns('84-155-0979-0', '978 84 155 0979 0')).toBe(true)
+    })
+    it('should reject isbns of different books', () => {
+      expect(ISBNUtils.areCompatibleIsbns('0380708957', '9788415509790')).toBe(false)
+    })
+    it('should reject an isbn13 with prefix 979, which has no isbn10', () => {
+      expect(ISBNUtils.areCompatibleIsbns('8415509790', '9791034902309')).toBe(false)
+    })
+    it('should reject malformed isbns without throwing', () => {
+      expect(ISBNUtils.areCompatibleIsbns('123', '9788415509790')).toBe(false)
+      expect(ISBNUtils.areCompatibleIsbns('8415509790', 'abc')).toBe(false)
+    })
   })
 })

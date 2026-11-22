@@ -83,21 +83,23 @@ export class ISBNUtils {
 
     // Case 3: Both provided, validate compatibility
     if (isbn10 != null && isbn13 != null) {
-      try {
-        const sanitizedIsbn10 = this.sanitizeIsbn(isbn10)
-        const sanitizedIsbn13 = this.sanitizeIsbn(isbn13)
-        const calculatedIsbn10 = this.isbn13ToIsbn10(sanitizedIsbn13)
-        if (calculatedIsbn10 !== sanitizedIsbn10) {
-          throw new Error('isbn10 and isbn13 are not compatible')
-        }
-        return { isbn10: sanitizedIsbn10, isbn13: sanitizedIsbn13 }
-      } catch (error) {
-        // ISBN-13 with prefix 979 cannot have ISBN-10
-        throw new Error('ISBN-13 with prefix 979 cannot have an ISBN-10')
+      if (!this.areCompatibleIsbns(isbn10, isbn13)) {
+        throw new Error('isbn10 and isbn13 are not compatible')
       }
+      return { isbn10: this.sanitizeIsbn(isbn10), isbn13: this.sanitizeIsbn(isbn13) }
     }
 
     throw new Error('Could not resolve ISBNs')
+  }
+
+  /** Whether both belong to the same book. Never throws, so it is safe inside a zod refine */
+  static areCompatibleIsbns (isbn10: string, isbn13: string): boolean {
+    try {
+      // Also throws for an ISBN-13 with prefix 979, which has no ISBN-10
+      return this.isbn13ToIsbn10(isbn13) === this.sanitizeIsbn(isbn10)
+    } catch {
+      return false
+    }
   }
 
   static isValidIsbn10 (isbn: string): boolean {

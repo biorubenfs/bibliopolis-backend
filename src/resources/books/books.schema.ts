@@ -39,11 +39,10 @@ export const newBookSchema = z
     path: ['isbn10']
   })
   .refine((data) => {
-    if (data.isbn13 != null && data.isbn10 != null) {
-      const calculatedIsbns = ISBNUtils.calculateIsbns(data.isbn10, data.isbn13)
-      return calculatedIsbns.isbn13 === data.isbn13 && calculatedIsbns.isbn10 === data.isbn10
-    }
-    return true
+    // zod runs every refine, so an invalid ISBN already has its own issue and is not reported twice
+    if (data.isbn13 == null || data.isbn10 == null) return true
+    if (!ISBNUtils.isValidIsbn13(data.isbn13) || !ISBNUtils.isValidIsbn10(data.isbn10)) return true
+    return ISBNUtils.areCompatibleIsbns(data.isbn10, data.isbn13)
   }, {
     message: 'isbn13 and isbn10 do not correspond to the same book',
     path: ['isbn13', 'isbn10']

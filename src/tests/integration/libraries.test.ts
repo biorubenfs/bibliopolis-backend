@@ -486,7 +486,7 @@ describe('libraries books management tests', async () => {
     const url = new URL('/libraries/01J9W8VR2CFZW8PJ1Q8Y4Y5WFA/books', librariesUrl)
     const body = {
       isbn13: '9780974326450',
-      isbn10: '0595491898',
+      isbn10: '0974326453',
       title: 'Lightning and Ashes',
       authors: ['John Guzlowski'],
       cover: {
@@ -495,7 +495,7 @@ describe('libraries books management tests', async () => {
       }
     }
 
-    await fetch(url, {
+    const response = await fetch(url, {
       headers: {
         Authorization: authHeader,
         'Content-Type': 'application/json'
@@ -504,6 +504,7 @@ describe('libraries books management tests', async () => {
       body: JSON.stringify(body)
     })
 
+    expect(response.status).equals(201)
     const counterAfterAddingBook = await userBooksDao.collection.countDocuments({ userId, bookId })
     expect(counterBeforeAddingBook).equals(counterAfterAddingBook)
   })
@@ -562,6 +563,43 @@ describe('libraries books management tests', async () => {
     })
 
     expect(response.status).equals(409)
+  })
+
+  describe('POST /libraries/:id/books - should reject with 400 a body whose isbns are not a valid pair', () => {
+    const cases = [
+      {
+        name: 'isbns of different books',
+        isbns: { isbn13: '9781595581662', isbn10: '0380708957' },
+        message: 'isbn13 and isbn10 do not correspond to the same book'
+      },
+      {
+        name: 'an isbn13 with prefix 979, which has no isbn10',
+        isbns: { isbn13: '9791034902309', isbn10: '0380708957' },
+        message: 'isbn13 and isbn10 do not correspond to the same book'
+      },
+      {
+        name: 'a malformed isbn10',
+        isbns: { isbn13: '9781595581662', isbn10: '123' },
+        message: 'isbn10 must be a valid ISBN-10'
+      }
+    ]
+
+    it.each(cases)('$name', async ({ isbns, message }) => {
+      const url = new URL('/libraries/01J9W8VR2CFZW8PJ1Q8Y4Y5WEX/books', librariesUrl)
+      const response = await fetch(url, {
+        headers: {
+          Authorization: authHeader,
+          'Content-Type': 'application/json'
+        },
+        method: 'POST',
+        body: JSON.stringify({ title: 'A book', authors: [], ...isbns })
+      })
+      const body = await response.json()
+
+      expect(response.status).equals(400)
+      expect(body.errorCode).equals(ApiRestErrorCode.ValidationError)
+      expect(body.validationError.map((issue: { message: string }) => issue.message)).toEqual([message])
+    })
   })
 
   it('POST /libraries/:id/books - should fail to add a non existing book to owned library', async () => {
