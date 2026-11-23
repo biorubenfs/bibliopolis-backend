@@ -5,6 +5,7 @@ import { DataSetType, loadDataInDb, MockDataSet } from '../../load-data.js'
 import mongo from '../../mongo.js'
 import { makeJwt } from '../../resources/auth/auth.utils.js'
 import booksDao from '../../resources/books/books.dao.js'
+import booksService from '../../resources/books/books.service.js'
 import importItemsDao from '../../resources/imports/import-items.dao.js'
 import { MAX_IMPORT_FILE_SIZE_BYTES } from '../../resources/imports/imports.constants.js'
 import importsDao from '../../resources/imports/imports.dao.js'
@@ -130,6 +131,7 @@ beforeEach(async () => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 afterAll(async () => {
@@ -444,20 +446,35 @@ describe('imports worker', () => {
     expect(await importItemsDao.collection.countDocuments({ importId, outcome: ImportItemOutcome.Added })).toBe(0)
   })
 
+  it('should add the book with the requested isbn when the sources answer with the isbns of other editions', async () => {
+    const importId = await createImport({ csv: csvOf(ISBN_NEW), libraryId: LIBRARY_ID })
+    // The ISBN-10 belongs to another book, as when a source mixes up editions
+    stubSources(async () => json({
+      items: [{
+        id: 'other-edition',
+        volumeInfo: {
+          title: 'Other edition',
+          industryIdentifiers: [{ type: 'ISBN_13', identifier: ISBN_OTHER }, { type: 'ISBN_10', identifier: '0439420891' }]
+        }
+      }]
+    }))
+
+    await worker.processQueue()
+
+    expect(await itemsByOutcome(importId)).toEqual({ [ISBN_NEW]: ImportItemOutcome.Added })
+    const book = await booksDao.collection.findOne({ isbn13: ISBN_NEW })
+    expect(book?.isbn10).toBe(ISBN10_NEW)
+    expect(await booksDao.collection.countDocuments({ isbn13: ISBN_OTHER })).toBe(0)
+  })
+
   it('should mark a row as internal_error and go on when something unexpected fails', async () => {
     const importId = await createImport({ csv: csvOf(ISBN_NEW, ISBN_OTHER), libraryId: LIBRARY_ID })
-    // Incompatible ISBNs make calculateIsbns throw an error that is neither a 404 nor a 503
-    stubSources(async (isbn) => isbn === ISBN_NEW
-      ? json({
-        items: [{
-          id: 'incompatible',
-          volumeInfo: {
-            title: 'Incompatible',
-            industryIdentifiers: [{ type: 'ISBN_13', identifier: ISBN_NEW }, { type: 'ISBN_10', identifier: '0439420891' }]
-          }
-        }]
-      })
-      : inGoogleBooks(isbn))
+    stubSources(inGoogleBooks)
+    const ensureBookExistsInBooks = booksService.ensureBookExistsInBooks.bind(booksService)
+    vi.spyOn(booksService, 'ensureBookExistsInBooks').mockImplementation(async (book) => {
+      if (book.isbn13 === ISBN_NEW) throw new Error('unexpected failure')
+      return await ensureBookExistsInBooks(book)
+    })
 
     await worker.processQueue()
 
