@@ -4,9 +4,7 @@ import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
 import { createUserSchema, updatePasswordSchema, updateUserSchema, usersQuerySchema } from './users.schemas.js'
 import { checkAdmin } from '../../middlewares/jwt.middleware.js'
-import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
-import { parseSkipLimitQP } from '../../utils.js'
 import { HttpStatusCode } from '../../types.js'
 
 const usersRouter = Router()
@@ -22,10 +20,9 @@ usersRouter.get('/me', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-usersRouter.get('/', checkAdmin, queryParamsValidator(usersQuerySchema), queryPaginationValidator, handler(async (req) => {
-  // already validated by queryParamsValidator, parsed again to apply the trim
-  const { search } = usersQuerySchema.parse(req.query)
-  const result = await usersService.list(parseSkipLimitQP(req), { search })
+usersRouter.get('/', checkAdmin, queryParamsValidator(usersQuerySchema), handler(async (req) => {
+  const { skip, limit, search } = req.query
+  const result = await usersService.list({ skip, limit }, { search })
   return { status: HttpStatusCode.OK, data: result }
 }))
 

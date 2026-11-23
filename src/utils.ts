@@ -1,5 +1,3 @@
-import { Request } from 'express'
-import { Page } from './types.js'
 import config from './config.js'
 import { BooksSource } from './resources/sources/sources.types.js'
 import { BooksApiError, SourcesUnavailableError } from './error/errors.js'
@@ -21,16 +19,6 @@ export function escapeRegExp (value: string): string {
 
 export function isNotNull<T> (value: T | null): value is T {
   return value !== null
-}
-
-/* At this point we know that skip and limit query params are strings parseable to
-number without errors because this function should be applied after query params middleware */
-export function parseSkipLimitQP (req: Request): Page {
-  const { skip, limit } = req.query
-  if (typeof skip !== 'string' || typeof limit !== 'string') {
-    throw new Error('should not happen')
-  }
-  return { skip: parseInt(skip), limit: parseInt(limit) }
 }
 
 interface CoverConfig {

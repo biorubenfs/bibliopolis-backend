@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationQuerySchema } from '../../pagination.schema.js'
 import { BooksSource } from '../sources/sources.types.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
 import { MAX_TAGS_PER_LIBRARY } from '../tags/tags.constants.js'
@@ -27,7 +28,7 @@ export const updateLibrarySchema = newLibrarySchema.partial().extend({
 /** As many IDs as a page can hold: the filter is meant to resolve a known set of libraries in one request */
 const MAX_IDS_FILTER = 100
 
-export const librariesQuerySchema = z.object({
+export const librariesQuerySchema = paginationQuerySchema.extend({
   ids: z.string()
     // Comma-separated library IDs; duplicates are dropped so they do not count towards the limit
     .transform(value => [...new Set(value.split(',').map(id => id.trim()).filter(id => id !== ''))])

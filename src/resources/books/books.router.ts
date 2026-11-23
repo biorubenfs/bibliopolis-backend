@@ -3,10 +3,8 @@ import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
 import { booksQuerySchema, createBookSchema, updateBookSchema } from './books.schema.js'
 import booksService from './books.service.js'
-import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 import { checkAdmin } from '../../middlewares/jwt.middleware.js'
-import { parseSkipLimitQP } from '../../utils.js'
 import { HttpStatusCode } from '../../types.js'
 
 const booksRouter = Router()
@@ -36,10 +34,9 @@ booksRouter.get('/:id', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-booksRouter.get('/', queryParamsValidator(booksQuerySchema), queryPaginationValidator, handler(async (req) => {
-  // already validated by queryParamsValidator, parsed again to apply the trim
-  const { search } = booksQuerySchema.parse(req.query)
-  const results = await booksService.list(parseSkipLimitQP(req), search)
+booksRouter.get('/', queryParamsValidator(booksQuerySchema), handler(async (req) => {
+  const { skip, limit, search } = req.query
+  const results = await booksService.list({ skip, limit }, search)
 
   return { status: HttpStatusCode.OK, data: results }
 }))

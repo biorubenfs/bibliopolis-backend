@@ -13,10 +13,10 @@ type DataCustomController =
   StreamResultObject |
   null
 
-type CustomController<TBody> = (req: Request<any, any, TBody>) => Promise<{ status: StatusCustomController, data: DataCustomController }>
+type CustomController<TBody, TQuery> = (req: Request<any, any, TBody, TQuery>) => Promise<{ status: StatusCustomController, data: DataCustomController }>
 
-function handler<TBody> (controller: CustomController<TBody>): RequestHandler<any, any, TBody> {
-  return async function (req: Request, res: Response, next: NextFunction) {
+function handler<TBody, TQuery> (controller: CustomController<TBody, TQuery>): RequestHandler<any, any, TBody, TQuery> {
+  return async function (req: Request<any, any, TBody, TQuery>, res: Response, next: NextFunction) {
     try {
       const { status, data } = await controller(req)
 

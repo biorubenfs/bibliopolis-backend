@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationQuerySchema } from '../../pagination.schema.js'
 import { ImportItemOutcome, ImportItemResolution } from './imports.interfaces.js'
 
 const columnIndexSchema = z.string().regex(/^\d+$/, 'must be a column index').transform(Number)
@@ -17,11 +18,11 @@ export const createImportQuerySchema = z.object({
   dryRun: booleanQueryParamSchema.optional()
 })
 
-export const listImportsQuerySchema = z.object({
+export const listImportsQuerySchema = paginationQuerySchema.extend({
   libraryId: z.string().min(1)
 })
 
-export const listImportItemsQuerySchema = z.object({
+export const listImportItemsQuerySchema = paginationQuerySchema.extend({
   outcome: z.union([outcomeSchema, z.array(outcomeSchema)]).optional(),
   pending: booleanQueryParamSchema.optional()
 })
