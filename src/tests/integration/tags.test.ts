@@ -150,23 +150,25 @@ describe('tags', () => {
   })
 
   it.each([
-    ['a global tag', clasicosId, 403],
-    ['a tag of another user', ensayoId, 403],
-    ['a tag that does not exist', ulid(), 404]
-  ])('PATCH /tags/:id - should fail to change %s', async (_case, tagId, status) => {
+    ['a global tag', clasicosId, 403, 'global tags cannot be modified'],
+    ['a tag of another user', ensayoId, 403, 'user has no permissions on this tag'],
+    ['a tag that does not exist', ulid(), 404, 'tag not found']
+  ])('PATCH /tags/:id - should fail to change %s', async (_case, tagId, status, message) => {
     const response = await request('PATCH', `/tags/${tagId}`, { color: 'red' })
 
     expect(response.status).toBe(status)
+    expect(response.body.message).toBe(message)
   })
 
   it.each([
-    ['a global tag', clasicosId, 403],
-    ['a tag of another user', ensayoId, 403],
-    ['a tag that does not exist', ulid(), 404]
-  ])('DELETE /tags/:id - should fail to delete %s', async (_case, tagId, status) => {
+    ['a global tag', clasicosId, 403, 'global tags cannot be modified'],
+    ['a tag of another user', ensayoId, 403, 'user has no permissions on this tag'],
+    ['a tag that does not exist', ulid(), 404, 'tag not found']
+  ])('DELETE /tags/:id - should fail to delete %s', async (_case, tagId, status, message) => {
     const response = await request('DELETE', `/tags/${tagId}`)
 
     expect(response.status).toBe(status)
+    expect(response.body.message).toBe(message)
     expect(await tagsDao.collection.countDocuments({ _id: tagId })).toBe(status === 404 ? 0 : 1)
   })
 

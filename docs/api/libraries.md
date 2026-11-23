@@ -150,7 +150,7 @@ La biblioteca pertenece a otro usuario.
 {
   "statusCode": 403,
   "errorCode": "PERMISSION ERROR",
-  "message": "library not found"
+  "message": "user has no permissions on this library"
 }
 ```
 

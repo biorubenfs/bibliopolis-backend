@@ -72,7 +72,7 @@ class LibrariesService {
     }
 
     if (library.userId !== userId) {
-      throw new LibraryPermissionsError('library not found')
+      throw new LibraryPermissionsError('user has no permissions on this library')
     }
 
     return new SingleResultObject(library)

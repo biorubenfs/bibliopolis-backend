@@ -199,7 +199,7 @@ Body no válido.
 
 #### 403 Forbidden
 
-La etiqueta es global (`global tags cannot be modified`) o pertenece a otro usuario (`tag not found`).
+La etiqueta es global (`global tags cannot be modified`) o pertenece a otro usuario (`user has no permissions on this tag`).
 
 ```json
 {

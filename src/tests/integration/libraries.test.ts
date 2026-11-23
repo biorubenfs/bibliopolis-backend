@@ -315,8 +315,11 @@ describe('libraries CRUD basic tests', async () => {
       method: 'PATCH',
       body: JSON.stringify(body)
     })
+    const responseBody = await response.json()
 
     expect(response.status).equals(403)
+    expect(responseBody.errorCode).equals(ApiRestErrorCode.PermissionError)
+    expect(responseBody.message).equals('user has no permissions on this library')
   })
 
   it('PATCH /libraries/:id - should fail to update a library with existing name', async () => {

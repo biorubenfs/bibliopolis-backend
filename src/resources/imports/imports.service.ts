@@ -232,7 +232,7 @@ class ImportsService {
       throw new ImportNotFoundError('import not found')
     }
     if (ownImport.userId !== userId) {
-      throw new ImportPermissionsError('import not found')
+      throw new ImportPermissionsError('user has no permissions on this import')
     }
 
     return ownImport
