@@ -315,8 +315,11 @@ describe('libraries CRUD basic tests', async () => {
       method: 'PATCH',
       body: JSON.stringify(body)
     })
+    const responseBody = await response.json()
 
     expect(response.status).equals(403)
+    expect(responseBody.errorCode).equals(ApiRestErrorCode.PermissionError)
+    expect(responseBody.message).equals('user has no permissions on this library')
   })
 
   it('PATCH /libraries/:id - should fail to update a library with existing name', async () => {
@@ -630,6 +633,46 @@ describe('libraries books management tests', async () => {
     })
 
     expect(response.status).equals(204)
+  })
+
+  it('removing a book from a library should leave everything as it was when a step fails', async () => {
+    const libraryId = '01JZREM0VEB00KTRANSACT10N1'
+    const userBookId = '01J9W9P6M5S0VRKVSRX3Q9T3W7'
+    const now = new Date()
+    await librariesDao.collection.insertOne({
+      _id: libraryId,
+      name: 'library whose book removal fails',
+      description: null,
+      books: [userBookId],
+      isFavorite: false,
+      tagIds: [],
+      userId,
+      createdAt: now,
+      updatedAt: now
+    })
+    await userBooksDao.collection.updateOne({ _id: userBookId }, { $push: { libraries: libraryId } })
+
+    try {
+      // The HTTP server runs in another process, so the failure can only be simulated on the service
+      const deleteUserBook = vi.spyOn(userBooksDao, 'delete').mockRejectedValue(new Error('database is down'))
+      try {
+        await expect(librariesService.removeBook(libraryId, userBookId, userId)).rejects.toThrow('database is down')
+      } finally {
+        deleteUserBook.mockRestore()
+      }
+
+      expect(await librariesDao.collection.countDocuments({ _id: libraryId, books: userBookId })).equals(1)
+      expect(await userBooksDao.collection.countDocuments({ _id: userBookId, libraries: libraryId })).equals(1)
+
+      // Once the failure is gone, the removal can be repeated and updates both collections
+      await librariesService.removeBook(libraryId, userBookId, userId)
+
+      expect(await librariesDao.collection.countDocuments({ _id: libraryId, books: userBookId })).equals(0)
+      expect(await userBooksDao.collection.countDocuments({ _id: userBookId, libraries: libraryId })).equals(0)
+    } finally {
+      await librariesDao.collection.deleteOne({ _id: libraryId })
+      await userBooksDao.collection.updateOne({ _id: userBookId }, { $pull: { libraries: libraryId } })
+    }
   })
 
   it('DELETE /libraries/:libraryId/books/:userBookId - should fail to remove a non existing book in a owned library', async () => {

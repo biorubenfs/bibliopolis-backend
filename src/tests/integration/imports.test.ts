@@ -724,6 +724,13 @@ describe('import report', () => {
     ])
 
     expect(responses.map(response => response.status)).toEqual([403, 403, 403, 403, 403])
+    expect(responses.map(response => response.body.message)).toEqual([
+      'user has no permissions on this import',
+      'user has no permissions on this import',
+      'user has no permissions on this library',
+      'user has no permissions on this import',
+      'user has no permissions on this import'
+    ])
   })
 
   it('should reject an administrator in the imports routes', async () => {

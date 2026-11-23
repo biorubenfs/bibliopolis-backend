@@ -61,7 +61,7 @@ Falta el ISBN o no es un ISBN-10/ISBN-13 válido.
 {
   "statusCode": 400,
   "errorCode": "VALIDATION ERROR",
-  "message": "invalid query param",
+  "message": "invalid query params",
   "validationError": [
     {
       "code": "custom",

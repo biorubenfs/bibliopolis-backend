@@ -76,7 +76,35 @@ describe('GET /external', () => {
 
     expect(response.status).toBe(400)
     expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+    expect(body.message).toBe('invalid query params')
     expect(sourceCalls).not.toHaveBeenCalled()
+  })
+
+  it('should return 400 without an isbn', async () => {
+    const response = await fetch(`${baseUrl}/external`, { headers: { Authorization: authHeader } })
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+    expect(body.message).toBe('invalid query params')
+    expect(body.validationError[0].path).toEqual(['isbn'])
+  })
+
+  it('should remove the hyphens of the isbn', async () => {
+    const sourceCalls = stubSources(networkFailure, networkFailure)
+
+    const response = await getExternal('978-0-88033-606-2')
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.results.attributes.isbn13).toBe(ISBN_IN_CATALOG)
+    expect(sourceCalls).not.toHaveBeenCalled()
+  })
+
+  it('should ignore the pagination query params, as it does not paginate', async () => {
+    const response = await fetch(`${baseUrl}/external?isbn=${ISBN_IN_CATALOG}&skip=-1`, { headers: { Authorization: authHeader } })
+
+    expect(response.status).toBe(200)
   })
 
   it('should return 404 when both sources answer that they do not have the book', async () => {

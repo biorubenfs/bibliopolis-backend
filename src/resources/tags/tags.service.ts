@@ -28,7 +28,7 @@ class TagsService {
       throw new TagPermissionsError('global tags cannot be modified')
     }
     if (tag.userId !== userId) {
-      throw new TagPermissionsError('tag not found')
+      throw new TagPermissionsError('user has no permissions on this tag')
     }
     return tag
   }

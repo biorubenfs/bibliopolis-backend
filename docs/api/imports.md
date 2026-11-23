@@ -280,7 +280,7 @@ La importación es de otro usuario.
 {
   "statusCode": 403,
   "errorCode": "PERMISSION ERROR",
-  "message": "import not found"
+  "message": "user has no permissions on this import"
 }
 ```
 
