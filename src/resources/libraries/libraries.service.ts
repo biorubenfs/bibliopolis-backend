@@ -135,7 +135,7 @@ class LibrariesService {
     }
 
     const updatedLibrary = await runInTransaction(async (session) => {
-      const updatedLibrary = await librariesDao.removeBookIdFromLibrary(library.entity.id, userBookId)
+      const updatedLibrary = await librariesDao.removeBookIdFromLibrary(library.entity.id, userBookId, session)
       if (updatedLibrary == null) {
         throw new Error('should not happen')
       }

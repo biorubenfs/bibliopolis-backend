@@ -123,11 +123,11 @@ class LibrariesDao extends Dao<DBLibrary> {
     return dbLibraryToEntity(updatedLibrary)
   }
 
-  async removeBookIdFromLibrary (libraryId: string, userBooksId: string): Promise<LibraryEntity | null> {
+  async removeBookIdFromLibrary (libraryId: string, userBooksId: string, session?: ClientSession): Promise<LibraryEntity | null> {
     const updatedLibrary = await this.collection.findOneAndUpdate(
       { _id: libraryId },
       { $pull: { books: userBooksId } },
-      { returnDocument: 'after' }
+      { returnDocument: 'after', session }
     )
     return dbLibraryToEntity(updatedLibrary)
   }
