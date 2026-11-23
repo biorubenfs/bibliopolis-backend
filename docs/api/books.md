@@ -48,7 +48,7 @@ A mano:
 | Campo     | Tipo     | Requerido         | Descripción                                                                 |
 | --------- | -------- | ----------------- | --------------------------------------------------------------------------- |
 | `mode`    | string   | Sí                | `sources` o `manual`                                                        |
-| `isbn`    | string   | Sí                | ISBN-10 o ISBN-13 válido. Se eliminan guiones y espacios. El otro ISBN se calcula cuando es posible |
+| `isbn`    | string   | Sí                | ISBN-10 o ISBN-13 válido según las [reglas de los ISBN](../index.md#isbn). Se eliminan guiones y espacios. El otro ISBN se calcula cuando es posible |
 | `title`   | string   | Solo en `manual`  | Título. Se eliminan los espacios de los extremos; no puede quedar vacío     |
 | `authors` | string[] | Solo en `manual`  | Al menos un autor. Cada uno, sin espacios en los extremos y no vacío        |
 

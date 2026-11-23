@@ -38,6 +38,18 @@ describe('isbn tests', () => {
       const result = ISBNUtils.isValidIsbn13(validIsbn13)
       expect(result).toBe(false)
     })
+    it.each([
+      ['979-8', '9798866451746'],
+      ['979-10', '9791034902309']
+    ])('should return true with a valid isbn13 with prefix %s', (_prefix, isbn13) => {
+      expect(ISBNUtils.isValidIsbn13(isbn13)).toBe(true)
+    })
+    it.each([
+      ['an EAN-13 that is not a book', '4006381333931'],
+      ['an ISMN (sheet music), which uses 979-0', '9790260000438']
+    ])('should return false with %s, even with a right check digit', (_name, ean13) => {
+      expect(ISBNUtils.isValidIsbn13(ean13)).toBe(false)
+    })
   })
 
   describe('isbn10 validation', () => {
@@ -109,6 +121,24 @@ describe('isbn tests', () => {
       const result = ISBNUtils.calculateIsbns(isbn10, isbn13)
       expect(result.isbn10).toBe(isbn10)
       expect(result.isbn13).toBe(isbn13)
+    })
+    it('should return a null isbn10 for an isbn13 with prefix 979', () => {
+      expect(ISBNUtils.calculateIsbns(null, '9791034902309')).toEqual({ isbn10: null, isbn13: '9791034902309' })
+    })
+    it('should throw with an invalid isbn13 instead of returning a null isbn10', () => {
+      expect(() => ISBNUtils.calculateIsbns(null, '9788415509791')).toThrow('ISBN-13 invalid')
+    })
+    it('should throw with an isbn10 with a wrong check digit', () => {
+      expect(() => ISBNUtils.calculateIsbns('8415509791', null)).toThrow('ISBN-10 invalid')
+    })
+    it('should not convert an isbn10 with a wrong check digit, which would give the isbn13 of another book', () => {
+      expect(() => ISBNUtils.isbn10ToIsbn13('8415509780')).toThrow('ISBN-10 invalid')
+    })
+    it('should not convert an isbn13 with a wrong check digit', () => {
+      expect(() => ISBNUtils.isbn13ToIsbn10('9788415509791')).toThrow('ISBN-13 invalid')
+    })
+    it('should not convert an isbn13 with prefix 979, which has no isbn10', () => {
+      expect(() => ISBNUtils.isbn13ToIsbn10('9791034902309')).toThrow('does not start with 978')
     })
     it('should say that the isbns are not compatible if both provided and they belong to different books', () => {
       expect(() => ISBNUtils.calculateIsbns('0380708957', '9788415509790')).toThrow('isbn10 and isbn13 are not compatible')

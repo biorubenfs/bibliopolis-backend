@@ -65,6 +65,20 @@ afterAll(async () => {
 })
 
 describe('GET /external', () => {
+  it.each([
+    ['an EAN-13 that is not a book', '4006381333931'],
+    ['an ISMN (sheet music), which uses 979-0', '9790260000438']
+  ])('should return 400 without asking the sources for %s', async (_name, ean13) => {
+    const sourceCalls = stubSources(notFound, notFound)
+
+    const response = await getExternal(ean13)
+    const body = await response.json()
+
+    expect(response.status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+    expect(sourceCalls).not.toHaveBeenCalled()
+  })
+
   it('should return 404 when both sources answer that they do not have the book', async () => {
     stubSources(notFound, notFound)
 

@@ -88,6 +88,16 @@ Los identificadores son [ULIDs](https://github.com/ulid/spec) y las fechas se de
 
 El body de las peticiones se valida antes de procesarlas. Los campos que no estén documentados para un endpoint se ignoran y no se guardan, y a los campos opcionales que se omitan se les aplica su valor por defecto.
 
+## ISBN
+
+Todos los endpoints que reciben un ISBN aplican las mismas reglas:
+
+- Se eliminan los guiones y los espacios.
+- Un ISBN-10 es válido si su dígito de control es correcto.
+- Un ISBN-13 es válido si su dígito de control es correcto y empieza por `978` o `979`. Los códigos de barras EAN-13 con otro prefijo no son libros y se rechazan, igual que los que empiezan por `979-0`, que es el prefijo de las partituras ([ISMN](https://www.loc.gov/ismn/structure.html)).
+
+Todo libro tiene ISBN-13, pero no todos tienen ISBN-10: solo los ISBN-13 con prefijo `978` tienen un ISBN-10 equivalente. Los de prefijo `979` se asignaron directamente como ISBN-13, así que su `isbn10` es `null`.
+
 ## Paginación
 
 Los endpoints que devuelven colecciones aceptan los query params:

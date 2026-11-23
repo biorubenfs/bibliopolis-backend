@@ -10,6 +10,7 @@ export class UserBookEntity extends Entity<EntityType.UserBooks> {
   readonly bookAuthors: readonly string[]
   readonly bookCover: BookCover
   readonly bookIsbn13: string
+  // Optional: only an ISBN-13 with prefix 978 has an ISBN-10. Those with prefix 979 were only ever issued as ISBN-13
   readonly bookIsbn10: string | null
   readonly rating: null | UserBookRating
   readonly notes: null | string

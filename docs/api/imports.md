@@ -73,7 +73,7 @@ Una fila está **pendiente** si requiere acción, su `resolution` es `null` y su
 
 Solo se usan las columnas de ISBN; las demás se ignoran, y el resto de los datos de cada libro se obtiene del catálogo o de las fuentes externas. Las columnas de ISBN se reconocen por su nombre en minúsculas, sin acentos y solo con letras y números, de forma que `ISBN-13`, `Isbn 13` e `isbn_13` son `isbn13`. Los nombres admitidos son, por prioridad: `isbn13`, `ean13`, `isbn`, `ean` e `isbn10`.
 
-El ISBN de cada fila es el primer valor no vacío de las columnas de ISBN, en ese orden. Se admite el formato `="9788408292609"` y se ignoran los guiones y los espacios. Son válidos los ISBN-10 y los ISBN-13 con prefijo `978` o `979`. El CSV que exporta [`GET /user-books/download`](user-books.md) se puede importar tal cual.
+El ISBN de cada fila es el primer valor no vacío de las columnas de ISBN, en ese orden. Se admite el formato `="9788408292609"` y se ignoran los guiones y los espacios. Son válidos los ISBN-10 y los ISBN-13 que cumplen las [reglas de los ISBN](../index.md#isbn): prefijo `978` o `979`, salvo `979-0`, que es el de las partituras. El CSV que exporta [`GET /user-books/download`](user-books.md) se puede importar tal cual.
 
 ## POST /imports
 

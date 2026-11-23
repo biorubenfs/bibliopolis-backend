@@ -126,8 +126,7 @@ export function normalizeIsbn (rawIsbn: string): string | null {
     return ISBNUtils.isbn10ToIsbn13(isbn)
   }
 
-  // isValidIsbn13 alone accepts any EAN-13
-  return /^97[89]/.test(isbn) && ISBNUtils.isValidIsbn13(isbn) ? isbn : null
+  return ISBNUtils.isValidIsbn13(isbn) ? isbn : null
 }
 
 export function classifyRows (csv: ParsedCsv, selection: CsvColumnSelection): ClassifiedCsvRow[] {

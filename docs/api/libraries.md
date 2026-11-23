@@ -339,8 +339,8 @@ Los datos del libro se pueden obtener previamente con [`GET /external`](external
 | Campo          | Tipo        | Requerido | Descripción                                                        |
 | -------------- | ----------- | --------- | ------------------------------------------------------------------ |
 | `title`        | string      | Sí        | Título del libro                                                   |
-| `isbn13`       | string/null | Sí*       | ISBN-13 válido o `null`. Se eliminan guiones y espacios            |
-| `isbn10`       | string/null | Sí*       | ISBN-10 válido o `null`. Se eliminan guiones y espacios            |
+| `isbn13`       | string/null | Sí*       | ISBN-13 válido ([reglas de los ISBN](../index.md#isbn)) o `null`. Se eliminan guiones y espacios |
+| `isbn10`       | string/null | Sí*       | ISBN-10 válido ([reglas de los ISBN](../index.md#isbn)) o `null`. Se eliminan guiones y espacios |
 | `authors`      | string[]    | No        | Autores del libro. Por defecto `[]`                                |
 | `cover`        | object      | No        | Portada del libro. Por defecto `{ "source": null, "value": null }` |
 | `cover.source` | string/null | Sí        | Fuente de la portada: `google_books` u `open_library`              |

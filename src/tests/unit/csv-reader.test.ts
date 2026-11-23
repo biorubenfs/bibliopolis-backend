@@ -120,6 +120,7 @@ describe('normalizeIsbn', () => {
     ['an ISBN-10 that lost its leading zero', '306406152'],
     ['a wrong check digit', '9780306406158'],
     ['an EAN-13 that is not a book', '4006381333931'],
+    ['an ISMN (sheet music), which uses 979-0', '9790260000438'],
     ['text', 'no tiene']
   ])('should reject %s', (_name, raw) => {
     expect(normalizeIsbn(raw)).toBeNull()
