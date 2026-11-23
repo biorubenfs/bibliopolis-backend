@@ -140,6 +140,8 @@ describe('POST /books', () => {
     ['no authors', { mode: 'manual', isbn: '9780134685991', title: 'Title', authors: [] }],
     ['an empty title', { mode: 'manual', isbn: '9780134685991', title: '  ', authors: ['Author'] }],
     ['an invalid ISBN', { mode: 'manual', isbn: '9780134685990', title: 'Title', authors: ['Author'] }],
+    ['an EAN-13 that is not a book', { mode: 'manual', isbn: '4006381333931', title: 'Title', authors: ['Author'] }],
+    ['an ISMN (sheet music), which uses 979-0', { mode: 'manual', isbn: '9790260000438', title: 'Title', authors: ['Author'] }],
     ['the title in the sources mode', { mode: 'sources', isbn: '9780134685991', title: 'Title' }],
     ['an unknown mode', { mode: 'other', isbn: '9780134685991' }]
   ])('should return 400 for a body with %s', async (_, body) => {

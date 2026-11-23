@@ -1,15 +1,26 @@
 /* eslint-disable @typescript-eslint/no-extraneous-class */
 import { IsbnPair } from './interfaces.utils'
 
+/**
+ * The EAN-13 prefixes of books. 978 holds every ISBN-10 converted to ISBN-13; 979 was opened later, so its ISBNs
+ * were only ever issued as ISBN-13 and have no ISBN-10. A new prefix, if the ISBN agency ever opens one, goes here.
+ */
+const ISBN13_PREFIXES = ['978', '979']
+// 979-0 is the ISMN (sheet music), not books: https://www.loc.gov/ismn/structure.html
+const ISMN_PREFIX = '9790'
+// The only prefix with an ISBN-10 equivalent
+const ISBN10_COMPATIBLE_PREFIX = '978'
+
 export class ISBNUtils {
   static isbn13ToIsbn10 (isbn13: string): string {
     const clean = this.sanitizeIsbn(isbn13)
 
-    if (!/^\d{13}$/.test(clean)) {
+    // A wrong check digit would be dropped below, and the result would be the ISBN-10 of another book
+    if (!this.isValidIsbn13(clean)) {
       throw new Error('ISBN-13 invalid')
     }
 
-    if (!clean.startsWith('978')) {
+    if (!clean.startsWith(ISBN10_COMPATIBLE_PREFIX)) {
       throw new Error(
         'This ISBN-13 cannot be converted to ISBN-10 (does not start with 978)'
       )
@@ -38,12 +49,13 @@ export class ISBNUtils {
     // Clean hyphens and spaces
     const clean = this.sanitizeIsbn(isbn10)
 
-    if (!/^\d{9}[\dX]$/.test(clean)) {
+    // A wrong check digit would be dropped below, and the result would be the ISBN-13 of another book
+    if (!this.isValidIsbn10(clean)) {
       throw new Error('ISBN-10 invalid')
     }
 
     // Remove ISBN-10 check digit and add 978
-    const core = '978' + clean.slice(0, 9)
+    const core = ISBN10_COMPATIBLE_PREFIX + clean.slice(0, 9)
 
     // Calculate ISBN-13 check digit
     let sum = 0
@@ -65,13 +77,12 @@ export class ISBNUtils {
     // Case 1: Only ISBN-13 provided
     if (isbn10 == null && isbn13 != null) {
       const sanitizedIsbn13 = this.sanitizeIsbn(isbn13)
-      try {
-        const calculatedIsbn10 = this.isbn13ToIsbn10(sanitizedIsbn13)
-        return { isbn10: calculatedIsbn10, isbn13: sanitizedIsbn13 }
-      } catch (error) {
-        // ISBN-13 not convertible (prefix 979), return null for isbn10
-        return { isbn10: null, isbn13: sanitizedIsbn13 }
+      if (!this.isValidIsbn13(sanitizedIsbn13)) {
+        throw new Error('ISBN-13 invalid')
       }
+      // An ISBN-13 with prefix 979 has no ISBN-10
+      const calculatedIsbn10 = sanitizedIsbn13.startsWith(ISBN10_COMPATIBLE_PREFIX) ? this.isbn13ToIsbn10(sanitizedIsbn13) : null
+      return { isbn10: calculatedIsbn10, isbn13: sanitizedIsbn13 }
     }
 
     // Case 2: Only ISBN-10 provided
@@ -114,9 +125,11 @@ export class ISBNUtils {
     return sum % 11 === 0
   }
 
+  /** The check digit alone accepts any EAN-13, so the prefix must also be one of books */
   static isValidIsbn13 (isbn: string): boolean {
     const clean = this.sanitizeIsbn(isbn)
     if (!/^\d{13}$/.test(clean)) return false
+    if (!ISBN13_PREFIXES.some(prefix => clean.startsWith(prefix)) || clean.startsWith(ISMN_PREFIX)) return false
     let sum = 0
     for (let i = 0; i < 12; i++) {
       sum += parseInt(clean[i], 10) * (i % 2 === 0 ? 1 : 3)

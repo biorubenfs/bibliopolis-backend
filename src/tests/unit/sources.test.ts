@@ -177,9 +177,9 @@ describe('getBookFromSourcesApis', () => {
     it('without an isbn10 when the requested isbn13 has no equivalent', async () => {
       stubSources(json({ items: [volume('Other edition', otherEditionIdentifiers)] }), notFound)
 
-      const book = await getBookFromSourcesApis('9791034902305')
+      const book = await getBookFromSourcesApis('9791034902309')
 
-      expect(book.isbn13).toBe('9791034902305')
+      expect(book.isbn13).toBe('9791034902309')
       expect(book.isbn10).toBeNull()
     })
 

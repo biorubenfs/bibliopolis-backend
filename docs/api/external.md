@@ -17,7 +17,7 @@ Con estas fuentes no hay una regla fiable para detectarlo, así que de momento n
 
 ### Query Params
 
-- `isbn`: string — ISBN-13 o ISBN-10 a buscar. Se eliminan guiones y espacios.
+- `isbn`: string — ISBN-13 o ISBN-10 a buscar, según las [reglas de los ISBN](../index.md#isbn). Se eliminan guiones y espacios.
 
 ### Respuestas
 

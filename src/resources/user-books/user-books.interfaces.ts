@@ -24,17 +24,4 @@ export enum DownloadFormat {
 
 export type DBUserBook = Omit<UserBookEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
 
-export interface NewUserBook {
-  libraryId: string
-  bookIsbn13: string
-  bookIsbn10: string
-  bookId: string
-  bookTitle: string
-  bookAuthors: readonly string[]
-  bookCover: null | number
-  rating: null
-  notes: null
-  userId: string
-}
-
 export type UpdateUserBook = z.infer<typeof userBookUpdateSchema>
