@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createUserSchema, newPasswordSchema, updatePasswordSchema } from '../../resources/users/users.schemas.js'
+import { createUserSchema, newPasswordSchema, updatePasswordSchema, updateUserSchema } from '../../resources/users/users.schemas.js'
 import { loginSchema } from '../../resources/auth/auth.schemas.js'
 import { GENERATED_PASSWORD_ALPHABET, GENERATED_PASSWORD_LENGTH, generatePassword } from '../../resources/users/users.utils.js'
 
@@ -13,6 +13,16 @@ describe('users schemas', () => {
 
     it('should reject a password: the backend generates it', () => {
       expect(createUserSchema.safeParse({ name: 'user', email: 'user@email.com', password: 'password' }).success).equals(false)
+    })
+  })
+
+  describe('updateUserSchema', () => {
+    it('should store the name trimmed', () => {
+      expect(updateUserSchema.parse({ name: '  new name ' })).toEqual({ name: 'new name' })
+    })
+
+    it.each([[''], ['   ']])('should reject the name "%s"', (name) => {
+      expect(updateUserSchema.safeParse({ name }).success).equals(false)
     })
   })
 

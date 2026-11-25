@@ -20,7 +20,7 @@ export const updatePasswordSchema = z.object({
 })
 
 export const updateUserSchema = z.object({
-  name: z.string()
+  name: z.string().trim().min(1)
 })
 
 export const usersQuerySchema = paginationQuerySchema.extend({

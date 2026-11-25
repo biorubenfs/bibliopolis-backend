@@ -226,7 +226,7 @@ Actualiza el nombre del usuario autenticado. El avatar se regenera a partir del 
 
 | Campo  | Tipo   | Requerido | Descripción             |
 | ------ | ------ | --------- | ----------------------- |
-| `name` | string | Sí        | Nuevo nombre de usuario |
+| `name` | string | Sí        | Nuevo nombre de usuario. Se eliminan los espacios de los extremos; no puede quedar vacío |
 
 ### Respuestas
 
