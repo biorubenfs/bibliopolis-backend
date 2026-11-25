@@ -29,12 +29,16 @@ function listLibrariesMongoFilter (userId: string, filter: LibrariesListFilter):
 }
 
 function sharedLibrariesMongoFilter (filter: SharedLibrariesListFilter): Filter<DBLibrary> {
-  const { search, matchingOwnerIds } = filter
-  if (search == null || search === '') return {}
+  const { ownerId, search, matchingOwnerIds } = filter
+  const mongoFilter: Filter<DBLibrary> = ownerId != null ? { userId: ownerId } : {}
 
-  // Case-insensitive substring match: user input is escaped so it is matched literally
-  const pattern = { $regex: escapeRegExp(search), $options: 'i' }
-  return { $or: [{ name: pattern }, { description: pattern }, { userId: { $in: [...(matchingOwnerIds ?? [])] } }] }
+  if (search != null && search !== '') {
+    // Case-insensitive substring match: user input is escaped so it is matched literally
+    const pattern = { $regex: escapeRegExp(search), $options: 'i' }
+    mongoFilter.$or = [{ name: pattern }, { description: pattern }, { userId: { $in: [...(matchingOwnerIds ?? [])] } }]
+  }
+
+  return mongoFilter
 }
 
 /** The matching libraries that are shared with the user, without the data that is private to their owner. */
@@ -197,6 +201,17 @@ class LibrariesDao extends Dao<DBLibrary> {
 
   async countShared (userId: string, filter: SharedLibrariesListFilter = {}): Promise<number> {
     return await this.collection.countDocuments({ ...sharedLibrariesMongoFilter(filter), 'members.userId': userId })
+  }
+
+  /** The owners of the libraries shared with the user, with how many each one shares. */
+  async countSharedByOwner (userId: string): Promise<ReadonlyArray<{ userId: string, count: number }>> {
+    const pipeline = [
+      { $match: { 'members.userId': userId } },
+      { $group: { _id: '$userId', count: { $sum: 1 } } },
+      { $project: { _id: 0, userId: '$_id', count: 1 } }
+    ]
+
+    return await this.collection.aggregate<{ userId: string, count: number }>(pipeline).toArray()
   }
 
   /** The owners of the libraries shared with the user. */

@@ -13,6 +13,7 @@ export interface LibrariesListFilter {
 }
 
 export interface SharedLibrariesListFilter {
+  ownerId?: string
   search?: string
   /** The owners whose name matches the search: all their libraries match it too. */
   matchingOwnerIds?: readonly string[]

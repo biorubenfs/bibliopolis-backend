@@ -6,7 +6,10 @@ import { DBSharedLibrary, SharedLibrariesListFilter } from '../libraries/librari
 import userBooksDao from '../user-books/user-books.dao.js'
 import usersDao from '../users/users.dao.js'
 import { SharedLibraryEntity } from './shared-libraries.entity.js'
+import { SharedLibraryOwnerEntity } from './shared-library-owners.entity.js'
 import { SharedLibraryBookEntity } from './shared-library-books.entity.js'
+
+type SharedLibrariesQuery = Pick<SharedLibrariesListFilter, 'search' | 'ownerId'>
 
 /** Read-only access of the members to the libraries of other users. */
 class SharedLibrariesService {
@@ -30,21 +33,36 @@ class SharedLibrariesService {
   }
 
   /** The names of the owners are in their users: the ones that match are found before searching the libraries. */
-  private async toListFilter (userId: string, search?: string): Promise<SharedLibrariesListFilter> {
-    if (search == null || search === '') return {}
+  private async toListFilter (userId: string, { search, ownerId }: SharedLibrariesQuery): Promise<SharedLibrariesListFilter> {
+    if (search == null || search === '') return { ownerId }
 
     const ownerIds = await librariesDao.findSharedOwnerIds(userId)
-    return { search, matchingOwnerIds: await usersDao.findIdsByName(ownerIds, search) }
+    return { ownerId, search, matchingOwnerIds: await usersDao.findIdsByName(ownerIds, search) }
   }
 
-  async list (userId: string, page: Page, search?: string): Promise<CollectionResultObject<SharedLibraryEntity>> {
-    const filter = await this.toListFilter(userId, search)
+  async list (userId: string, page: Page, query: SharedLibrariesQuery = {}): Promise<CollectionResultObject<SharedLibraryEntity>> {
+    const filter = await this.toListFilter(userId, query)
     const [libraries, total] = await Promise.all([
       librariesDao.listShared(userId, page.skip, page.limit, filter),
       librariesDao.countShared(userId, filter)
     ])
 
     return new CollectionResultObject(await this.toEntities(libraries), { ...page, total })
+  }
+
+  /** Who shares libraries with the user, by name. Sorted and paginated here because the names are in the users. */
+  async listOwners (userId: string, page: Page): Promise<CollectionResultObject<SharedLibraryOwnerEntity>> {
+    const counts = new Map((await librariesDao.countSharedByOwner(userId)).map(owner => [owner.userId, owner.count]))
+    const owners = await usersDao.findByIds([...counts.keys()])
+    const entities = owners
+      .map(owner => new SharedLibraryOwnerEntity(owner, counts.get(owner.id) ?? 0))
+      .sort((a, b) => {
+        const byName = a.name.localeCompare(b.name, 'es')
+        // The id keeps the order of the owners with the same name
+        return byName !== 0 ? byName : a.id.localeCompare(b.id)
+      })
+
+    return new CollectionResultObject(entities.slice(page.skip, page.skip + page.limit), { ...page, total: entities.length })
   }
 
   async get (libraryId: string, userId: string): Promise<SingleResultObject<SharedLibraryEntity>> {

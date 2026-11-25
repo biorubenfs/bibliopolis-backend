@@ -40,6 +40,7 @@ Lista las bibliotecas compartidas con el usuario autenticado, empezando por la c
 ### Query Params
 
 - `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre, descripción o nombre del propietario contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No busca en el email del propietario. No distingue mayúsculas y minúsculas, pero sí tildes, y se busca de forma literal. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
+- `owner`: string (opcional) — ID de uno de los propietarios ([`GET /shared-libraries/owners`](#get-shared-librariesowners)). Devuelve solo las bibliotecas que comparte con el usuario. Se combina con `search`; el ID de alguien que no comparte ninguna da 0 resultados
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 
@@ -73,7 +74,48 @@ Lista las bibliotecas compartidas con el usuario autenticado, empezando por la c
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos, o `search` repetido o con más de 100 caracteres.
+Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres, u `owner` repetido o mal formado.
+
+---
+
+## GET /shared-libraries/owners
+
+Lista los propietarios de las bibliotecas compartidas con el usuario autenticado, por nombre. Admite [paginación](../index.md#paginacion).
+
+Su `id` es el del usuario y sirve para filtrar [`GET /shared-libraries`](#get-shared-libraries). Los nombres no son únicos; el email y el rol no se devuelven.
+
+| Campo            | Tipo   | Descripción                                                |
+| ---------------- | ------ | ---------------------------------------------------------- |
+| `name`           | string | Nombre del propietario                                     |
+| `librariesCount` | number | Número de bibliotecas que comparte con el usuario          |
+
+### Respuestas
+
+#### 200 OK
+
+```json
+{
+  "results": [
+    {
+      "type": "shared-library-owners",
+      "id": "01J9BHWZ8N4B1JBSAFCBKQGERS",
+      "attributes": {
+        "name": "user01",
+        "librariesCount": 2
+      }
+    }
+  ],
+  "paginationInfo": {
+    "skip": 0,
+    "limit": 10,
+    "total": 1
+  }
+}
+```
+
+#### 400 Bad Request
+
+Parámetros de paginación no válidos.
 
 ---
 

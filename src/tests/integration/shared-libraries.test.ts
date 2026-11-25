@@ -122,6 +122,7 @@ afterAll(async () => {
 describe('access to the shared libraries', () => {
   const routes: Array<[string, string]> = [
     ['GET', '/shared-libraries'],
+    ['GET', '/shared-libraries/owners'],
     ['GET', `/shared-libraries/${firstLibraryId}`],
     ['GET', `/shared-libraries/${firstLibraryId}/books`],
     ['DELETE', `/shared-libraries/${firstLibraryId}`]
@@ -143,7 +144,7 @@ describe('access to the shared libraries', () => {
   })
 
   // The same answer for a library that does not exist and for one without access, its owner included
-  it.each(routes.slice(1))('%s %s - should not exist for who is not a member', async (method, path) => {
+  it.each(routes.slice(2))('%s %s - should not exist for who is not a member', async (method, path) => {
     const notMember = await request(method, path, otherGuestAuth)
     const owner = await request(method, path, ownerAuth)
     const unknown = await request(method, path.replace(firstLibraryId, ulid()), guestAuth)
@@ -343,6 +344,108 @@ describe('GET /shared-libraries?search=', () => {
 
     expect(status).toBe(400)
     expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+  })
+})
+
+describe('GET /shared-libraries?owner=', () => {
+  beforeEach(async () => {
+    await usersDao.collection.updateOne({ _id: ownerId }, { $set: { name: 'Ana' } })
+    await usersDao.collection.updateOne({ _id: guestId }, { $set: { name: 'Luis' } })
+    for (const [libraryId, time] of [[firstLibraryId, 1000], [secondLibraryId, 2000], [guestLibraryId, 3000]] as const) {
+      const members = [{ userId: otherGuestId, createdAt: new Date(time) }]
+      await librariesDao.collection.updateOne({ _id: libraryId }, { $set: { members } })
+    }
+  })
+
+  async function list (query: string): Promise<{ ids: string[], total: number }> {
+    const { status, body } = await get(`/shared-libraries?${query}`, otherGuestAuth)
+    expect(status).toBe(200)
+    return { ids: ids(body), total: body.paginationInfo.total }
+  }
+
+  it('should only list the libraries of that owner', async () => {
+    expect(await list(`owner=${ownerId}`)).toEqual({ ids: [secondLibraryId, firstLibraryId], total: 2 })
+    expect(await list(`owner=${guestId}`)).toEqual({ ids: [guestLibraryId], total: 1 })
+    expect(await list(`owner=${ownerId}&limit=1&skip=1`)).toEqual({ ids: [firstLibraryId], total: 2 })
+  })
+
+  it('should be combined with the search', async () => {
+    expect(await list(`owner=${ownerId}&search=second`)).toEqual({ ids: [secondLibraryId], total: 1 })
+    // A search that matches the name of an owner does not add the libraries of others
+    expect(await list(`owner=${ownerId}&search=ana`)).toEqual({ ids: [secondLibraryId, firstLibraryId], total: 2 })
+    expect(await list(`owner=${ownerId}&search=luis`)).toEqual({ ids: [], total: 0 })
+  })
+
+  it('should not give access to the libraries that are not shared', async () => {
+    await librariesDao.removeMember(firstLibraryId, otherGuestId)
+    await librariesDao.removeMember(guestLibraryId, otherGuestId)
+
+    expect(await list(`owner=${ownerId}`)).toEqual({ ids: [secondLibraryId], total: 1 })
+    expect(await list(`owner=${guestId}`)).toEqual({ ids: [], total: 0 })
+    expect(await list(`owner=${otherGuestId}`)).toEqual({ ids: [], total: 0 })
+    expect(await list(`owner=${ulid()}`)).toEqual({ ids: [], total: 0 })
+  })
+
+  it.each(['owner=', 'owner=ana', `owner=${ownerId}&owner=${guestId}`])('should fail with %s', async (query) => {
+    const { status, body } = await get(`/shared-libraries?${query}`, otherGuestAuth)
+
+    expect(status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+  })
+})
+
+describe('GET /shared-libraries/owners', () => {
+  it('should return exactly the public data of the owners, by name', async () => {
+    await usersDao.collection.updateOne({ _id: ownerId }, { $set: { name: 'Óscar' } })
+    await usersDao.collection.updateOne({ _id: guestId }, { $set: { name: 'Pablo' } })
+    const zoe = newUser(ulid(), 'zoe@email.com', 'zoe')
+    await usersDao.collection.insertOne(zoe)
+    const library = await librariesDao.create({ name: 'Of Zoe' }, zoe._id)
+    for (const libraryId of [library.id, guestLibraryId, firstLibraryId, secondLibraryId]) {
+      await librariesDao.addMember(libraryId, otherGuestId)
+    }
+
+    const { status, body } = await get('/shared-libraries/owners', otherGuestAuth)
+
+    expect(status).toBe(200)
+    expect(body).toEqual({
+      results: [
+        { type: 'shared-library-owners', id: ownerId, attributes: { name: 'Óscar', librariesCount: 2 } },
+        { type: 'shared-library-owners', id: guestId, attributes: { name: 'Pablo', librariesCount: 1 } },
+        { type: 'shared-library-owners', id: zoe._id, attributes: { name: 'zoe', librariesCount: 1 } }
+      ],
+      paginationInfo: { skip: 0, limit: 10, total: 3 }
+    })
+
+    const { body: page } = await get('/shared-libraries/owners?skip=1&limit=1', otherGuestAuth)
+    expect(ids(page)).toEqual([guestId])
+    expect(page.paginationInfo).toEqual({ skip: 1, limit: 1, total: 3 })
+  })
+
+  it('should tell apart the owners with the same name', async () => {
+    await usersDao.collection.updateMany({ _id: { $in: [ownerId, guestId] } }, { $set: { name: 'Ana' } })
+    await librariesDao.addMember(guestLibraryId, otherGuestId)
+    await librariesDao.addMember(firstLibraryId, otherGuestId)
+
+    const { body } = await get('/shared-libraries/owners', otherGuestAuth)
+
+    expect(ids(body)).toEqual([ownerId, guestId])
+  })
+
+  it('should leave out who no longer shares anything with the user, and the user', async () => {
+    expect(ids((await get('/shared-libraries/owners')).body)).toEqual([ownerId])
+    expect(ids((await get('/shared-libraries/owners', ownerAuth)).body)).toEqual([])
+
+    await librariesDao.removeMember(firstLibraryId, guestId)
+
+    const { body } = await get('/shared-libraries/owners')
+    expect(body).toEqual({ results: [], paginationInfo: { skip: 0, limit: 10, total: 0 } })
+  })
+
+  it('should fail with an invalid pagination', async () => {
+    const { status } = await get('/shared-libraries/owners?limit=101')
+
+    expect(status).toBe(400)
   })
 })
 

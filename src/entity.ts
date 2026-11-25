@@ -9,7 +9,8 @@ export enum EntityType {
   Tags = 'tags',
   LibraryMembers = 'library-members',
   SharedLibraries = 'shared-libraries',
-  SharedLibraryBooks = 'shared-library-books'
+  SharedLibraryBooks = 'shared-library-books',
+  SharedLibraryOwners = 'shared-library-owners'
 }
 
 export interface ResultEntityObject {
