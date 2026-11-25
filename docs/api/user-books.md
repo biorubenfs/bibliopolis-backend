@@ -191,6 +191,8 @@ El user book no existe o pertenece a otro usuario.
 
 Modifica la valoración y las notas de un user book del usuario autenticado. Solo se pueden modificar los campos `rating` y `notes`, y ambos son obligatorios (se puede enviar `null` para borrarlos).
 
+El user book debe estar en alguna biblioteca: uno que se ha quitado de todas conserva su valoración y sus notas, pero no se puede modificar hasta que se vuelva a añadir a una.
+
 ### Body
 
 ```json
@@ -274,7 +276,7 @@ Errores de validación en el body de la petición.
 
 #### 404 Not Found
 
-El user book no existe o pertenece a otro usuario.
+El user book no existe, pertenece a otro usuario o no está en ninguna biblioteca.
 
 ```json
 {

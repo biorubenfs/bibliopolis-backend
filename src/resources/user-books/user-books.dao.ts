@@ -181,9 +181,10 @@ class UserBooksDao extends Dao<DBUserBook> {
     await this.collection.updateMany({ libraries: libraryId, userId }, { $pull: { libraries: libraryId } }, { session })
   }
 
+  /** Only a book that is in some library can be rated: one removed from all of them keeps its data untouched. */
   async update (id: string, userId: string, data: UpdateUserBook): Promise<UserBookEntity | null> {
     const upd = await this.collection.findOneAndUpdate(
-      { _id: id, userId },
+      { _id: id, userId, 'libraries.0': { $exists: true } },
       {
         $set: { ...data }
       },
