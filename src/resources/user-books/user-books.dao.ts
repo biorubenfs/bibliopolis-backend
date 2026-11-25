@@ -1,9 +1,10 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBUserBook, SharedUserBook, UpdateUserBook, UserBookOpinion } from './user-books.interfaces.js'
+import { DBUserBook, RatedSharedUserBookCopy, SharedUserBook, SharedUserBookCopy, UpdateUserBook, UserBookOpinion } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
-import { AggregationCursor, ClientSession, Filter, WithId } from 'mongodb'
+import { AggregationCursor, ClientSession, Document, Filter, WithId } from 'mongodb'
+import { AccessibleLibrary } from '../libraries/libraries.interfaces.js'
 import { BookEntity } from '../books/books.entity.js'
 import { BookSyncData } from '../books/books.interfaces.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
@@ -48,6 +49,30 @@ function buildMongoFilter (filters: UserBooksFilter): Filter<DBUserBook> {
     ...(filters.inAnyLibrary === true ? { 'libraries.0': { $exists: true } } : {}),
     ...(filters.userId != null ? { userId: filters.userId } : {}),
     ...(filters.search != null && filters.search !== '' ? buildSearchMatch(filters.search) : {})
+  }
+}
+
+/** The copies of the owners of these libraries, only the ones that are in them. */
+function buildSharedFilter (libraries: readonly AccessibleLibrary[], search?: string): Filter<DBUserBook> {
+  return {
+    // Implied by the libraries, but the index starts with it
+    userId: { $in: [...new Set(libraries.map(library => library.userId))] },
+    ...buildMongoFilter({ librariesIds: libraries.map(library => library._id), search })
+  }
+}
+
+/** Neither the notes, nor the rating, nor the libraries without access leave the database. */
+function sharedCopyProjection (libraries: readonly AccessibleLibrary[]): Document {
+  return {
+    _id: 0,
+    userId: 1,
+    bookId: 1,
+    bookTitle: 1,
+    bookAuthors: 1,
+    bookCover: 1,
+    bookIsbn13: 1,
+    bookIsbn10: 1,
+    libraries: { $setIntersection: ['$libraries', { $literal: libraries.map(library => library._id) }] }
   }
 }
 
@@ -180,6 +205,65 @@ class UserBooksDao extends Dao<DBUserBook> {
       .skip(page.skip)
       .limit(page.limit)
       .toArray()
+  }
+
+  /** The books of the libraries, each one once: the ones that any of the owners added last go first. */
+  async listSharedBookIds (libraries: readonly AccessibleLibrary[], search: string | undefined, page: Page): Promise<readonly string[]> {
+    const pipeline = [
+      { $match: buildSharedFilter(libraries, search) },
+      { $group: { _id: '$bookId', newest: { $max: '$_id' } } },
+      { $sort: { newest: -1 } },
+      { $skip: page.skip },
+      { $limit: page.limit }
+    ]
+    const books = await this.collection.aggregate<{ _id: string }>(pipeline).toArray()
+
+    return books.map(book => book._id)
+  }
+
+  async countSharedBooks (libraries: readonly AccessibleLibrary[], search: string | undefined): Promise<number> {
+    const pipeline = [
+      { $match: buildSharedFilter(libraries, search) },
+      { $group: { _id: '$bookId' } },
+      { $count: 'total' }
+    ]
+    const [result] = await this.collection.aggregate<{ total: number }>(pipeline).toArray()
+
+    return result?.total ?? 0
+  }
+
+  /** The copies of the given books in the libraries, one per owner and in no particular order. */
+  async findSharedCopies (bookIds: readonly string[], libraries: readonly AccessibleLibrary[]): Promise<readonly SharedUserBookCopy[]> {
+    const pipeline = [
+      { $match: { ...buildSharedFilter(libraries), bookId: { $in: [...bookIds] } } },
+      { $project: sharedCopyProjection(libraries) }
+    ]
+    return await this.collection.aggregate<SharedUserBookCopy>(pipeline).toArray()
+  }
+
+  /**
+   * The copies of a book, one per owner, with their ratings. Only a library that contains the book, and that the
+   * reader has access to, can share the rating: the other ones of the same owner do not count.
+   */
+  async findSharedCopiesWithRatings (bookId: string, libraries: readonly AccessibleLibrary[]): Promise<readonly RatedSharedUserBookCopy[]> {
+    const ratingLibraryIds = libraries.filter(library => library.shareRatings).map(library => library._id)
+    const sharesRatings = {
+      $gt: [{ $size: { $setIntersection: ['$libraries', { $literal: ratingLibraryIds }] } }, 0]
+    }
+
+    const pipeline = [
+      { $match: { ...buildSharedFilter(libraries), bookId } },
+      // A stable order for the owners with the same name
+      { $sort: { _id: 1 } },
+      {
+        $project: {
+          ...sharedCopyProjection(libraries),
+          sharesRatings,
+          rating: { $cond: [sharesRatings, '$rating', null] }
+        }
+      }
+    ]
+    return await this.collection.aggregate<RatedSharedUserBookCopy>(pipeline).toArray()
   }
 
   /** The opinions of the user on the given books, only on those that are in some of their own libraries. */

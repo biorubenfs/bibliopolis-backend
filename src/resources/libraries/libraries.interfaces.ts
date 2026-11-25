@@ -31,3 +31,6 @@ export type DBSharedLibrary = Pick<DBLibrary, '_id' | 'userId' | 'name' | 'descr
   booksCount: number
   sharedAt: Date
 }
+
+/** What gives one of its members access to the books of a library, and to the ratings of its owner. */
+export type AccessibleLibrary = Pick<DBLibrary, '_id' | 'userId' | 'name' | 'shareRatings'>

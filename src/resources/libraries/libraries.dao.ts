@@ -1,7 +1,7 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBLibrary, DBSharedLibrary, LibrariesListFilter, LibraryMember, NewLibrary, SharedLibrariesListFilter, UpdateLibrary } from './libraries.interfaces.js'
+import { AccessibleLibrary, DBLibrary, DBSharedLibrary, LibrariesListFilter, LibraryMember, NewLibrary, SharedLibrariesListFilter, UpdateLibrary } from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { MAX_MEMBERS_PER_LIBRARY } from '../library-members/library-members.constants.js'
 import { ClientSession, Document, Filter } from 'mongodb'
@@ -197,6 +197,14 @@ class LibrariesDao extends Dao<DBLibrary> {
 
   async countShared (userId: string, filter: SharedLibrariesListFilter = {}): Promise<number> {
     return await this.collection.countDocuments({ ...sharedLibrariesMongoFilter(filter), 'members.userId': userId })
+  }
+
+  /** All the libraries shared with the user, with what is needed to read their books. */
+  async findAccessible (userId: string): Promise<readonly AccessibleLibrary[]> {
+    return await this.collection
+      .find({ 'members.userId': userId })
+      .project<AccessibleLibrary>({ userId: 1, name: 1, shareRatings: 1 })
+      .toArray()
   }
 
   /** The owners of the libraries shared with the user. */
