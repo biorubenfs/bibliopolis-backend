@@ -2,7 +2,7 @@ import { CollectionResultObject, SingleResultObject } from '../../results.js'
 import { Page } from '../../types.js'
 import librariesDao from '../libraries/libraries.dao.js'
 import { LibraryNotFoundError } from '../libraries/libraries.error.js'
-import { DBSharedLibrary } from '../libraries/libraries.interfaces.js'
+import { DBSharedLibrary, SharedLibrariesListFilter } from '../libraries/libraries.interfaces.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import usersDao from '../users/users.dao.js'
 import { SharedLibraryEntity } from './shared-libraries.entity.js'
@@ -29,10 +29,19 @@ class SharedLibrariesService {
     return libraries.map(library => new SharedLibraryEntity(library, ownerNames.get(library.userId) ?? ''))
   }
 
-  async list (userId: string, page: Page): Promise<CollectionResultObject<SharedLibraryEntity>> {
+  /** The names of the owners are in their users: the ones that match are found before searching the libraries. */
+  private async toListFilter (userId: string, search?: string): Promise<SharedLibrariesListFilter> {
+    if (search == null || search === '') return {}
+
+    const ownerIds = await librariesDao.findSharedOwnerIds(userId)
+    return { search, matchingOwnerIds: await usersDao.findIdsByName(ownerIds, search) }
+  }
+
+  async list (userId: string, page: Page, search?: string): Promise<CollectionResultObject<SharedLibraryEntity>> {
+    const filter = await this.toListFilter(userId, search)
     const [libraries, total] = await Promise.all([
-      librariesDao.listShared(userId, page.skip, page.limit),
-      librariesDao.countShared(userId)
+      librariesDao.listShared(userId, page.skip, page.limit, filter),
+      librariesDao.countShared(userId, filter)
     ])
 
     return new CollectionResultObject(await this.toEntities(libraries), { ...page, total })

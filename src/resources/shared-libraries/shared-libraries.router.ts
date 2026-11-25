@@ -1,16 +1,15 @@
 import { Router } from 'express'
 import handler from '../../handler.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
-import { paginationQuerySchema } from '../../pagination.schema.js'
 import { HttpStatusCode } from '../../types.js'
-import { sharedLibraryBooksQuerySchema } from './shared-libraries.schemas.js'
+import { sharedLibrariesQuerySchema, sharedLibraryBooksQuerySchema } from './shared-libraries.schemas.js'
 import sharedLibrariesService from './shared-libraries.service.js'
 
 const sharedLibrariesRouter = Router()
 
-sharedLibrariesRouter.get('/', queryParamsValidator(paginationQuerySchema), handler(async (req) => {
-  const { skip, limit } = req.query
-  const result = await sharedLibrariesService.list(req.userId ?? '', { skip, limit })
+sharedLibrariesRouter.get('/', queryParamsValidator(sharedLibrariesQuerySchema), handler(async (req) => {
+  const { skip, limit, search } = req.query
+  const result = await sharedLibrariesService.list(req.userId ?? '', { skip, limit }, search)
   return { status: HttpStatusCode.OK, data: result }
 }))
 

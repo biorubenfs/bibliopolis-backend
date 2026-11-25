@@ -263,6 +263,89 @@ describe('GET /shared-libraries', () => {
   })
 })
 
+describe('GET /shared-libraries?search=', () => {
+  // Shared with the other guest by two owners, the most recently shared first
+  const sharedIds = [guestLibraryId, secondLibraryId, firstLibraryId]
+
+  async function search (text: string, query = ''): Promise<{ ids: string[], total: number }> {
+    const { status, body } = await get(`/shared-libraries?search=${encodeURIComponent(text)}${query}`, otherGuestAuth)
+    expect(status).toBe(200)
+    return { ids: ids(body), total: body.paginationInfo.total }
+  }
+
+  beforeEach(async () => {
+    await usersDao.collection.updateOne({ _id: ownerId }, { $set: { name: 'Ana Bright' } })
+    await usersDao.collection.updateOne({ _id: guestId }, { $set: { name: 'Luis' } })
+
+    const libraries = [
+      { _id: firstLibraryId, name: 'Crime novels', description: 'Detectives', sharedAt: 1000 },
+      { _id: secondLibraryId, name: 'Poetry', description: null, sharedAt: 2000 },
+      { _id: guestLibraryId, name: 'Travels', description: 'Novels and diaries (2020)', sharedAt: 3000 }
+    ]
+    for (const { _id, name, description, sharedAt } of libraries) {
+      const members = [{ userId: otherGuestId, createdAt: new Date(sharedAt) }]
+      await librariesDao.collection.updateOne({ _id }, { $set: { name, description, members } })
+    }
+  })
+
+  it.each([
+    ['the name', 'poet', [secondLibraryId]],
+    ['the description', 'detectives', [firstLibraryId]],
+    ['the name or the description', 'NOVELS', [guestLibraryId, firstLibraryId]],
+    ['the name of the owner', 'bright', [secondLibraryId, firstLibraryId]],
+    ['a part of a word', 'uis', [guestLibraryId]],
+    ['text with spaces around', '  poetry  ', [secondLibraryId]],
+    ['special characters, literally', '(2020)', [guestLibraryId]],
+    ['a pattern, literally', '.*', []],
+    ['nothing', 'unknown', []]
+  ])('should match %s', async (_field, text, expected) => {
+    expect(await search(text)).toEqual({ ids: expected, total: expected.length })
+  })
+
+  it('should not search in the email of the owner, nor in their role or id', async () => {
+    for (const text of ['user01', '@email.com', 'regular', ownerId]) {
+      expect(await search(text)).toEqual({ ids: [], total: 0 })
+    }
+  })
+
+  it('should not find libraries that are not shared with the user', async () => {
+    // Of the same owner, and matching by its own name and by the name of the owner
+    await librariesDao.create({ name: 'Romance novels' }, ownerId)
+    expect((await search('novels')).ids).toEqual([guestLibraryId, firstLibraryId])
+    expect((await search('ana')).ids).toEqual([secondLibraryId, firstLibraryId])
+
+    await librariesDao.removeMember(firstLibraryId, otherGuestId)
+    expect(await search('crime')).toEqual({ ids: [], total: 0 })
+    expect((await search('ana')).ids).toEqual([secondLibraryId])
+  })
+
+  it('should find the libraries by the current name of their owner', async () => {
+    await usersDao.collection.updateOne({ _id: ownerId }, { $set: { name: 'Marta' } })
+
+    expect((await search('bright')).ids).toEqual([])
+    expect((await search('marta')).ids).toEqual([secondLibraryId, firstLibraryId])
+  })
+
+  it('should paginate the matching libraries', async () => {
+    expect(await search('novels', '&limit=1')).toEqual({ ids: [guestLibraryId], total: 2 })
+    expect(await search('novels', '&limit=1&skip=1')).toEqual({ ids: [firstLibraryId], total: 2 })
+  })
+
+  it.each(['', '   '])('should ignore an empty search (%j)', async (text) => {
+    expect(await search(text)).toEqual({ ids: sharedIds, total: 3 })
+  })
+
+  it.each([
+    ['too long', `search=${'a'.repeat(101)}`],
+    ['repeated', 'search=a&search=b']
+  ])('should fail with a search %s', async (_reason, query) => {
+    const { status, body } = await get(`/shared-libraries?${query}`, otherGuestAuth)
+
+    expect(status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+  })
+})
+
 describe('GET /shared-libraries/:id', () => {
   it('should return the same data as the list', async () => {
     const { status, body } = await get(`/shared-libraries/${firstLibraryId}`)

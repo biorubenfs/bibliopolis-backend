@@ -68,6 +68,16 @@ class UsersDao extends Dao<DBUser> {
     return dbUsers.map(dbUserToEntity).filter(isNotNull)
   }
 
+  /** Which of the given users have a name that contains the search. */
+  async findIdsByName (ids: readonly string[], search: string): Promise<readonly string[]> {
+    const dbUsers = await this.collection
+      .find({ _id: { $in: [...ids] }, name: { $regex: escapeRegExp(search), $options: 'i' } })
+      .project<Pick<DBUser, '_id'>>({ _id: 1 })
+      .toArray()
+
+    return dbUsers.map(dbUser => dbUser._id)
+  }
+
   async create (newUserData: CreateUser, role: Role): Promise<UserEntity> {
     const now = new Date()
     const dbUser: DBUser = {

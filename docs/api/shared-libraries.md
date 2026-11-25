@@ -37,6 +37,12 @@ Las notas del propietario no se devuelven nunca, ni las opiniones de los demás 
 
 Lista las bibliotecas compartidas con el usuario autenticado, empezando por la compartida más recientemente. Admite [paginación](../index.md#paginacion).
 
+### Query Params
+
+- `search`: string (opcional, máx. 100 caracteres) — Devuelve las bibliotecas cuyo nombre, descripción o nombre del propietario contienen el texto, aunque sea parte de una palabra (`fan` encuentra «Fantasía»). No busca en el email del propietario. No distingue mayúsculas y minúsculas, pero sí tildes, y se busca de forma literal. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. El `total` de `paginationInfo` cuenta solo las bibliotecas que coinciden
+- `skip`: number (opcional) — Elementos a omitir
+- `limit`: number (opcional) — Límite de resultados
+
 ### Respuestas
 
 #### 200 OK
@@ -67,7 +73,7 @@ Lista las bibliotecas compartidas con el usuario autenticado, empezando por la c
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos.
+Parámetros de paginación no válidos, o `search` repetido o con más de 100 caracteres.
 
 ---
 

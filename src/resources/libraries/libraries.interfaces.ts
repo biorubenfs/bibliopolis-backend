@@ -12,6 +12,12 @@ export interface LibrariesListFilter {
   tagIds?: readonly string[]
 }
 
+export interface SharedLibrariesListFilter {
+  search?: string
+  /** The owners whose name matches the search: all their libraries match it too. */
+  matchingOwnerIds?: readonly string[]
+}
+
 /** A user who can see a library of another one. The owner is not a member. */
 export interface LibraryMember {
   userId: string
