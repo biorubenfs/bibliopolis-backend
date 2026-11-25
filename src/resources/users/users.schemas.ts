@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationQuerySchema } from '../../pagination.schema.js'
 
 // Applies to the passwords being set. The login and the current password are not checked against
 // it, so that users whose password predates these limits can still authenticate.
@@ -22,6 +23,6 @@ export const updateUserSchema = z.object({
   name: z.string()
 })
 
-export const usersQuerySchema = z.object({
+export const usersQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(100).optional()
 })

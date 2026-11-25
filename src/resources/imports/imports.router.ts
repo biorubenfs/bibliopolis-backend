@@ -1,12 +1,9 @@
 import { Router } from 'express'
-import { z } from 'zod'
 import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
 import { uploadCsv } from '../../middlewares/csv-upload.middleware.js'
-import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 import { HttpStatusCode } from '../../types.js'
-import { parseSkipLimitQP } from '../../utils.js'
 import {
   createImportQuerySchema,
   importRequestSchema,
@@ -19,7 +16,7 @@ import importsService from './imports.service.js'
 const importsRouter = Router()
 
 importsRouter.post('/', uploadCsv, queryParamsValidator(createImportQuerySchema), bodyValidator(importRequestSchema), handler(async (req) => {
-  const { dryRun } = req.query as z.infer<typeof createImportQuerySchema>
+  const { dryRun } = req.query
 
   if (dryRun === 'true') {
     const result = await importsService.dryRun(req.file, req.body, req.userId ?? '')
@@ -30,9 +27,9 @@ importsRouter.post('/', uploadCsv, queryParamsValidator(createImportQuerySchema)
   return { status: HttpStatusCode.Accepted, data: result }
 }))
 
-importsRouter.get('/', queryParamsValidator(listImportsQuerySchema), queryPaginationValidator, handler(async (req) => {
-  const { libraryId } = req.query as z.infer<typeof listImportsQuerySchema>
-  const result = await importsService.list(libraryId, req.userId ?? '', parseSkipLimitQP(req))
+importsRouter.get('/', queryParamsValidator(listImportsQuerySchema), handler(async (req) => {
+  const { skip, limit, libraryId } = req.query
+  const result = await importsService.list(libraryId, req.userId ?? '', { skip, limit })
   return { status: HttpStatusCode.OK, data: result }
 }))
 
@@ -41,13 +38,13 @@ importsRouter.get('/:id', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-importsRouter.get('/:id/items', queryParamsValidator(listImportItemsQuerySchema), queryPaginationValidator, handler(async (req) => {
-  const { outcome, pending } = req.query as z.infer<typeof listImportItemsQuerySchema>
+importsRouter.get('/:id/items', queryParamsValidator(listImportItemsQuerySchema), handler(async (req) => {
+  const { skip, limit, outcome, pending } = req.query
   const filter = {
     outcomes: outcome != null ? [outcome].flat() : undefined,
     pending: pending != null ? pending === 'true' : undefined
   }
-  const result = await importsService.listItems(req.params.id, req.userId ?? '', filter, parseSkipLimitQP(req))
+  const result = await importsService.listItems(req.params.id, req.userId ?? '', filter, { skip, limit })
   return { status: HttpStatusCode.OK, data: result }
 }))
 

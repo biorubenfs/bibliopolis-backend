@@ -65,7 +65,7 @@ function assertPayload (payload: JwtPayload): void {
   }
 }
 
-export function checkAdmin (req: Request, res: Response, next: NextFunction): void {
+export function checkAdmin (req: Request<unknown, unknown, unknown, unknown>, res: Response, next: NextFunction): void {
   if (req.role !== Role.Admin) {
     return next(new ForbiddenError('must be admin'))
   }

@@ -47,7 +47,7 @@ Flujo de una petición: `main.ts` → `App` (`app.ts`: conecta a Mongo, arranca 
 
 Cada recurso en `src/resources/<nombre>/` sigue la misma estructura de capas:
 
-- `*.router.ts` — rutas. Los handlers se envuelven en `handler()` (`src/handler.ts`) y devuelven `{ status, data }`; nunca tocan `res` directamente. Validación con `bodyValidator(schema)`, `queryParamsValidator(schema)`, `queryPaginationValidator` (esquemas zod en `*.schemas.ts`).
+- `*.router.ts` — rutas. Los handlers se envuelven en `handler()` (`src/handler.ts`) y devuelven `{ status, data }`; nunca tocan `res` directamente. Validación con `bodyValidator(schema)` y `queryParamsValidator(schema)` (esquemas zod en `*.schemas.ts`): ambos sustituyen `req.body` / `req.query` por el valor ya transformado y tipado, así que no hay que volver a parsearlo. Los listados paginados amplían `paginationQuerySchema` (`src/pagination.schema.ts`) con sus filtros.
 - `*.service.ts` — lógica de negocio y comprobación de permisos (por `userId`/`Role`); devuelve objetos resultado de `src/results.ts` (`SingleResultObject`, `CollectionResultObject` con paginación, `MiscResultObject`, `TokenResultObject`, `StreamResultObject`, …). `handler()` los serializa según su clase.
 - `*.dao.ts` — extiende `Dao<T>` (`src/dao.ts`); es dueño de la colección de Mongo y mapea documentos de BD a entidades. Se exporta como instancia singleton.
 - `*.entity.ts` — extiende `Entity<EntityType>` (`src/entity.ts`); `attributes()` define la forma pública del JSON (`{ type, id, attributes }`).

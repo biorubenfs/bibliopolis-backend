@@ -4,16 +4,12 @@ import bodyValidator from '../../middlewares/body-validator.middleware.js'
 import handler from '../../handler.js'
 import { HttpStatusCode } from '../../types.js'
 import { userBooksQuerySchema, userBookUpdateSchema, userBooksDownloadQuerySchema } from './user-books.schemas.js'
-import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
-import { parseSkipLimitQP } from '../../utils.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
-import { z } from 'zod'
 
 const userBooksRouter = Router()
 
-userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), queryPaginationValidator, handler(async (req) => {
-  // Parsed again to get the transformed values (such as the trimmed search): the middleware only validates
-  const { userId, libraryId, search } = userBooksQuerySchema.parse(req.query)
+userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), handler(async (req) => {
+  const { skip, limit, userId, libraryId, search } = req.query
   // normalize libraryId to array
   const librariesIds = libraryId != null
     ? Array.isArray(libraryId) ? libraryId : [libraryId]
@@ -24,7 +20,7 @@ userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), queryPagina
     search
   }
   const result = await userBooksService.list(
-    parseSkipLimitQP(req),
+    { skip, limit },
     req.userId ?? '',
     filter
   )
@@ -32,7 +28,7 @@ userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), queryPagina
 }))
 
 userBooksRouter.get('/download', queryParamsValidator(userBooksDownloadQuerySchema), handler(async (req) => {
-  const { libraryId, format } = req.query as z.infer<typeof userBooksDownloadQuerySchema>
+  const { libraryId, format } = req.query
 
   const stream = await userBooksService.download(libraryId, req.userId ?? '', format)
   return { status: HttpStatusCode.OK, data: stream }

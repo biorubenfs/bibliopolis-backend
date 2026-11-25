@@ -10,8 +10,7 @@ import { externalQuerySchema } from './external.schemas.js'
 const externalRouter = Router()
 
 externalRouter.get('/', queryParamsValidator(externalQuerySchema), handler(async (req) => {
-  // already validated by queryParamsValidator, parsed again to apply the sanitization
-  const { isbn } = externalQuerySchema.parse(req.query)
+  const { isbn } = req.query
 
   // TODO: Do this in a service
   let result: MiscResultObject

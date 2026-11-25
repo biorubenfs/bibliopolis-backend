@@ -4,8 +4,6 @@ import bodyValidator from '../../middlewares/body-validator.middleware.js'
 
 import { addBookToLibrarySchema, librariesQuerySchema, newLibrarySchema, updateLibrarySchema } from './libraries.schemas.js'
 import librariesService from './libraries.service.js'
-import { queryPaginationValidator } from '../../middlewares/pagination-validator.middleware.js'
-import { parseSkipLimitQP } from '../../utils.js'
 import { HttpStatusCode } from '../../types.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 
@@ -21,10 +19,9 @@ librariesRouter.get('/:id', handler(async (req) => {
   return { status: HttpStatusCode.OK, data: result }
 }))
 
-librariesRouter.get('/', queryParamsValidator(librariesQuerySchema), queryPaginationValidator, handler(async (req) => {
-  // already validated by queryParamsValidator, parsed again to apply the trim
-  const { ids, search, favorites, tags } = librariesQuerySchema.parse(req.query)
-  const result = await librariesService.list(req.userId ?? '', parseSkipLimitQP(req), { ids, search, favorites, tagIds: tags })
+librariesRouter.get('/', queryParamsValidator(librariesQuerySchema), handler(async (req) => {
+  const { skip, limit, ids, search, favorites, tags } = req.query
+  const result = await librariesService.list(req.userId ?? '', { skip, limit }, { ids, search, favorites, tagIds: tags })
   return { status: HttpStatusCode.OK, data: result }
 }))
 

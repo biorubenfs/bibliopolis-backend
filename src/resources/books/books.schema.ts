@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationQuerySchema } from '../../pagination.schema.js'
 import { BooksSource } from '../sources/sources.types.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
 
@@ -83,6 +84,6 @@ export const updateBookSchema = z.object({
   { message: 'At least one of title, authors or coverSource must be provided' }
 )
 
-export const booksQuerySchema = z.object({
+export const booksQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(100).optional()
 })

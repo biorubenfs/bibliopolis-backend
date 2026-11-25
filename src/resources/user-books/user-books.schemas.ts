@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { paginationQuerySchema } from '../../pagination.schema.js'
 import { UserBookRating, DownloadFormat } from './user-books.interfaces.js'
 
 export const userBookUpdateSchema = z.object({
@@ -10,7 +11,7 @@ export const userBookUpdateSchema = z.object({
   notes: z.string().trim().max(150).nullable()
 })
 
-export const userBooksQuerySchema = z.object({
+export const userBooksQuerySchema = paginationQuerySchema.extend({
   userId: z.string().optional(),
   libraryId: z.union([z.string(), z.array(z.string())]).optional(),
   search: z.string().trim().max(100).optional()
