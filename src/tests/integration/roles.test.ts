@@ -29,7 +29,8 @@ describe('routes by role', () => {
     ['/libraries/01J9W8VR2CFZW8PJ1Q8Y4Y5WEX'],
     ['/user-books'],
     ['/imports?libraryId=01J9W8VR2CFZW8PJ1Q8Y4Y5WEX'],
-    ['/tags']
+    ['/tags'],
+    ['/shared-libraries']
   ])('GET %s - should be forbidden to an admin', async (path) => {
     const { status, body } = await get(path, adminAuth)
 
@@ -40,7 +41,8 @@ describe('routes by role', () => {
   it.each([
     ['/libraries'],
     ['/user-books'],
-    ['/tags']
+    ['/tags'],
+    ['/shared-libraries']
   ])('GET %s - should still be allowed to a regular user', async (path) => {
     const { status } = await get(path, regularAuth)
 

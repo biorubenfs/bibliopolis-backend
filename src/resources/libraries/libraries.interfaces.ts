@@ -19,3 +19,9 @@ export interface LibraryMember {
 }
 
 export type DBLibrary = Omit<LibraryEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
+
+/** A library as one of its members sees it, along with the date it was shared with them. */
+export type DBSharedLibrary = Pick<DBLibrary, '_id' | 'userId' | 'name' | 'description' | 'shareRatings'> & {
+  booksCount: number
+  sharedAt: Date
+}

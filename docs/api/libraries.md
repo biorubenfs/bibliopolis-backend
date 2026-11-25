@@ -451,7 +451,7 @@ La biblioteca no existe o el user book no está en ella.
 
 ## GET /libraries/:id/members
 
-Lista los miembros de una biblioteca: los usuarios que pueden verla. Del invitado más recientemente al más antiguo. Admite [paginación](../index.md#paginacion). Solo el propietario, que no cuenta como miembro, puede consultarlos.
+Lista los miembros de una biblioteca: los usuarios que pueden verla en [`/shared-libraries`](shared-libraries.md). Del invitado más recientemente al más antiguo. Admite [paginación](../index.md#paginacion). Solo el propietario, que no cuenta como miembro, puede consultarlos.
 
 Atributos de un miembro (su `id` es el del usuario):
 
@@ -504,7 +504,7 @@ La biblioteca no existe.
 
 ## POST /libraries/:id/members
 
-Da acceso de solo lectura a un usuario, hasta un máximo de 20 por biblioteca. El acceso es inmediato: el usuario no tiene que aceptarlo. Solo el propietario puede invitar.
+Da acceso de solo lectura a un usuario, hasta un máximo de 20 por biblioteca. El acceso es inmediato: el usuario no tiene que aceptarlo, y puede salir con [`DELETE /shared-libraries/:id`](shared-libraries.md#delete-shared-librariesid). Solo el propietario puede invitar.
 
 ### Body
 
@@ -633,7 +633,7 @@ La biblioteca no existe (`library not found`) o el usuario no es miembro:
 
 ## Notas de implementación
 
-- Solo el propietario puede consultar, modificar o eliminar una biblioteca en estos endpoints, añadir o quitar libros y gestionar sus miembros. Los administradores no tienen acceso.
+- Solo el propietario puede consultar, modificar o eliminar una biblioteca en estos endpoints, añadir o quitar libros y gestionar sus miembros. Los miembros la consultan en [`/shared-libraries`](shared-libraries.md). Los administradores no tienen acceso.
 - Los IDs de la lista `books` corresponden a [user books](user-books.md), no a libros del catálogo.
 - Para listar los libros de una biblioteca con todos sus datos se usa [`GET /user-books?libraryId=<id>`](user-books.md#get-user-books), y para exportarlos [`GET /user-books/download`](user-books.md#get-user-booksdownload).
 - Las etiquetas de `tagIds` se gestionan en [`/tags`](tags.md). Al borrar una etiqueta, se quita de todas las bibliotecas de su propietario.

@@ -1,10 +1,10 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBLibrary, LibrariesListFilter, LibraryMember, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
+import { DBLibrary, DBSharedLibrary, LibrariesListFilter, LibraryMember, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { MAX_MEMBERS_PER_LIBRARY } from '../library-members/library-members.constants.js'
-import { ClientSession, Filter } from 'mongodb'
+import { ClientSession, Document, Filter } from 'mongodb'
 
 function dbLibraryToEntity (dbLibrary: DBLibrary | null): LibraryEntity | null {
   return dbLibrary == null ? null : new LibraryEntity(dbLibrary)
@@ -26,6 +26,25 @@ function listLibrariesMongoFilter (userId: string, filter: LibrariesListFilter):
   }
 
   return mongoFilter
+}
+
+/** The matching libraries that are shared with the user, without the data that is private to their owner. */
+function sharedLibrariesStages (userId: string, filter: Filter<DBLibrary> = {}): Document[] {
+  const ownMembership = { $filter: { input: '$members', cond: { $eq: ['$$this.userId', { $literal: userId }] } } }
+
+  return [
+    { $match: { ...filter, 'members.userId': userId } },
+    {
+      $project: {
+        userId: 1,
+        name: 1,
+        description: 1,
+        shareRatings: 1,
+        booksCount: { $size: '$books' },
+        sharedAt: { $first: { $map: { input: ownMembership, in: '$$this.createdAt' } } }
+      }
+    }
+  ]
 }
 
 class LibrariesDao extends Dao<DBLibrary> {
@@ -144,6 +163,31 @@ class LibrariesDao extends Dao<DBLibrary> {
       { $pull: { members: { userId } } }
     )
     return result.modifiedCount > 0
+  }
+
+  /** null if the library does not exist or the user is not a member. */
+  async findShared (libraryId: string, userId: string): Promise<DBSharedLibrary | null> {
+    const [shared] = await this.collection
+      .aggregate<DBSharedLibrary>(sharedLibrariesStages(userId, { _id: libraryId }))
+      .toArray()
+
+    return shared ?? null
+  }
+
+  /** The libraries shared with the user, the most recently shared first. */
+  async listShared (userId: string, skip: number, limit: number): Promise<readonly DBSharedLibrary[]> {
+    const pipeline = [
+      ...sharedLibrariesStages(userId),
+      { $sort: { sharedAt: -1, _id: -1 } },
+      { $skip: skip },
+      { $limit: limit }
+    ]
+
+    return await this.collection.aggregate<DBSharedLibrary>(pipeline).toArray()
+  }
+
+  async countShared (userId: string): Promise<number> {
+    return await this.collection.countDocuments({ 'members.userId': userId })
   }
 
   async addBookIdToLibrary (libraryId: string, bookId: string, session?: ClientSession): Promise<LibraryEntity | null> {

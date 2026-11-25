@@ -13,6 +13,7 @@ import userBooksRouter from './resources/user-books/user-books.router.js'
 import { requestLogger } from './middlewares/request-logger.js'
 import externalRouter from './resources/external/external.router.js'
 import importsRouter from './resources/imports/imports.router.js'
+import sharedLibrariesRouter from './resources/shared-libraries/shared-libraries.router.js'
 import tagsRouter from './resources/tags/tags.router.js'
 
 import { readFile } from 'fs/promises'
@@ -64,6 +65,7 @@ export default class Server {
     this.express.use('/users', usersRouter)
     this.express.use('/books', booksRouter)
     this.express.use('/libraries', checkRegular, librariesRouter)
+    this.express.use('/shared-libraries', checkRegular, sharedLibrariesRouter)
     this.express.use('/user-books', checkRegular, userBooksRouter)
     this.express.use('/external', externalRouter)
     this.express.use('/imports', checkRegular, importsRouter)

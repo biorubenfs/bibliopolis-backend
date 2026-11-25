@@ -24,4 +24,10 @@ export enum DownloadFormat {
 
 export type DBUserBook = Omit<UserBookEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
 
+/** What the members of a shared library see of a book of its owner. Never the notes; the rating, only if it is shared. */
+export type SharedUserBook = Pick<DBUserBook, 'bookId' | 'bookTitle' | 'bookAuthors' | 'bookCover' | 'bookIsbn13' | 'bookIsbn10'> & Partial<Pick<DBUserBook, 'rating'>>
+
+/** The opinion of a user on a book. */
+export type UserBookOpinion = Pick<DBUserBook, 'bookId' | 'rating' | 'notes'>
+
 export type UpdateUserBook = z.infer<typeof userBookUpdateSchema>

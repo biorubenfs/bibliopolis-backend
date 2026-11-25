@@ -151,6 +151,18 @@ describe('user books indexes', () => {
   })
 })
 
+describe('opinions of a user on the books of a shared library', () => {
+  it('should be found by the unique index, without reading other books of the user', async () => {
+    const bookIds = ['01J9KKFS6CKTSVY0ETH9A7PHXW', '01J9KKFTWAKVR1HGHCER50JJMQ', ulid()]
+    const plan = await userBooksDao.collection
+      .find({ userId: user01Id, 'libraries.0': { $exists: true }, bookId: { $in: bookIds } })
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
+    expect(plan.executionStats.totalDocsExamined).toBe(2)
+  })
+})
+
 describe('libraries indexes', () => {
   it('should find the libraries shared with a user by index', async () => {
     const userId = ulid()

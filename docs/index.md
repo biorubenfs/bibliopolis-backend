@@ -10,6 +10,7 @@ API REST de Bibliopolis para gestionar usuarios, sus bibliotecas personales y lo
 | [Users](api/users.md)            | `/users`      | Gestión de usuarios y del perfil propio                                  |
 | [Books](api/books.md)            | `/books`      | Catálogo compartido de libros, indexado por ISBN                         |
 | [Libraries](api/libraries.md)    | `/libraries`  | Bibliotecas del usuario y libros que contienen                           |
+| [Shared Libraries](api/shared-libraries.md) | `/shared-libraries` | Bibliotecas que otros usuarios han compartido con el usuario, en solo lectura |
 | [User Books](api/user-books.md)  | `/user-books` | Ejemplares de libros de un usuario (valoración, notas, exportación)      |
 | [External](api/external.md)      | `/external`   | Búsqueda de un libro por ISBN en el catálogo y en las fuentes externas   |
 | [Imports](api/imports.md)        | `/imports`    | Importación de libros a una biblioteca desde un fichero CSV              |
@@ -36,7 +37,7 @@ Authorization: Bearer <accessToken>
 - Solo hay un token (no hay refresh token). Su caducidad es configurable en el servidor (7 días por defecto).
 - No hay logout en el servidor: el cliente descarta el token, que sigue siendo válido hasta que caduca.
 - El token contiene el ID del usuario y su rol (`regular` o `admin`). Algunos endpoints solo están disponibles para administradores.
-- Un administrador gestiona el catálogo y los usuarios; no tiene bibliotecas. Las rutas `/libraries`, `/user-books`, `/imports` y `/tags` responden `403` a un administrador.
+- Un administrador gestiona el catálogo y los usuarios; no tiene bibliotecas. Las rutas `/libraries`, `/shared-libraries`, `/user-books`, `/imports` y `/tags` responden `403` a un administrador.
 
 Errores de autenticación (`401 Unauthorized`):
 
@@ -51,7 +52,7 @@ Errores de permisos por rol (`403 Forbidden`):
 | `errorCode`        | `message`                | Causa                                                                  |
 | ------------------ | ------------------------ | ---------------------------------------------------------------------- |
 | `PERMISSION ERROR` | `must be admin`          | El endpoint requiere rol `admin`                                       |
-| `PERMISSION ERROR` | `must be a regular user` | El endpoint es solo para usuarios normales (`/libraries`, `/user-books`, `/imports`, `/tags`) |
+| `PERMISSION ERROR` | `must be a regular user` | El endpoint es solo para usuarios normales (`/libraries`, `/shared-libraries`, `/user-books`, `/imports`, `/tags`) |
 
 ## Formato de las respuestas
 
