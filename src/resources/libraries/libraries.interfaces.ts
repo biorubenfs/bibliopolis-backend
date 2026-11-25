@@ -12,4 +12,10 @@ export interface LibrariesListFilter {
   tagIds?: readonly string[]
 }
 
+/** A user who can see a library of another one. The owner is not a member. */
+export interface LibraryMember {
+  userId: string
+  createdAt: Date
+}
+
 export type DBLibrary = Omit<LibraryEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }

@@ -1,8 +1,9 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBLibrary, LibrariesListFilter, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
+import { DBLibrary, LibrariesListFilter, LibraryMember, NewLibrary, UpdateLibrary } from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
+import { MAX_MEMBERS_PER_LIBRARY } from '../library-members/library-members.constants.js'
 import { ClientSession, Filter } from 'mongodb'
 
 function dbLibraryToEntity (dbLibrary: DBLibrary | null): LibraryEntity | null {
@@ -37,6 +38,8 @@ class LibrariesDao extends Dao<DBLibrary> {
     // Same order as list(): favorites first, then by id
     await this.collection.createIndex({ userId: 1, isFavorite: -1, _id: 1 })
     await this.collection.createIndex({ userId: 1, tagIds: 1 })
+    // The libraries shared with a user
+    await this.collection.createIndex({ 'members.userId': 1 })
   }
 
   async create (newLibrary: NewLibrary, userId: string): Promise<LibraryEntity> {
@@ -47,7 +50,9 @@ class LibrariesDao extends Dao<DBLibrary> {
       _id: ulid(),
       books: [],
       isFavorite: false,
+      shareRatings: false,
       tagIds: newLibrary.tagIds ?? [],
+      members: [],
       userId,
       createdAt: now,
       updatedAt: now
@@ -113,6 +118,32 @@ class LibrariesDao extends Dao<DBLibrary> {
   /** Removes a deleted tag from the libraries of the user. */
   async removeTagFromLibraries (tagId: string, userId: string, session?: ClientSession): Promise<void> {
     await this.collection.updateMany({ userId, tagIds: tagId }, { $pull: { tagIds: tagId } }, { session })
+  }
+
+  /**
+   * Adds a member, or returns null if the library does not exist, is full or already has that member. The filter makes
+   * it atomic: neither the same user nor one over the limit can be added by simultaneous invitations.
+   */
+  async addMember (libraryId: string, userId: string): Promise<LibraryMember | null> {
+    const member: LibraryMember = { userId, createdAt: new Date() }
+    const result = await this.collection.updateOne(
+      {
+        _id: libraryId,
+        'members.userId': { $ne: userId },
+        [`members.${MAX_MEMBERS_PER_LIBRARY - 1}`]: { $exists: false }
+      },
+      { $push: { members: member } }
+    )
+    return result.modifiedCount > 0 ? member : null
+  }
+
+  /** Whether the user was a member. */
+  async removeMember (libraryId: string, userId: string): Promise<boolean> {
+    const result = await this.collection.updateOne(
+      { _id: libraryId, 'members.userId': userId },
+      { $pull: { members: { userId } } }
+    )
+    return result.modifiedCount > 0
   }
 
   async addBookIdToLibrary (libraryId: string, bookId: string, session?: ClientSession): Promise<LibraryEntity | null> {

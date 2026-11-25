@@ -20,9 +20,10 @@ export const newLibrarySchema = z.object({
   tagIds: tagIdsSchema.optional()
 })
 
-// isFavorite is only changed through PATCH: a new library is never a favorite
+// isFavorite and shareRatings are only changed through PATCH: a new library is never a favorite nor shares the ratings
 export const updateLibrarySchema = newLibrarySchema.partial().extend({
-  isFavorite: z.boolean().optional()
+  isFavorite: z.boolean().optional(),
+  shareRatings: z.boolean().optional()
 })
 
 /** As many IDs as a page can hold: the filter is meant to resolve a known set of libraries in one request */

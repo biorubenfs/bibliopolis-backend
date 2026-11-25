@@ -149,8 +149,9 @@ Todos los errores tienen el mismo formato:
 | 409    | `CONFLICT ERROR`            | El recurso ya existe (email, ISBN, nombre de biblioteca o de etiqueta, …) |
 | 409    | `IMPORT ALREADY ACTIVE`     | El usuario ya tiene una importación en curso                      |
 | 409    | `TAG LIMIT REACHED`         | El usuario ya tiene el máximo de etiquetas personales             |
+| 409    | `LIBRARY MEMBERS LIMIT REACHED` | La biblioteca ya tiene el máximo de miembros                  |
 | 422    | `COVER NOT AVAILABLE`       | La fuente elegida no tiene portada para el libro                  |
 | 413    | `IMPORT FILE TOO LARGE`     | El fichero de una importación supera el límite de tamaño          |
-| 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos                             |
+| 429    | `TOO MANY REQUESTS ERROR`   | Demasiados intentos de login fallidos, o demasiadas invitaciones fallidas a bibliotecas |
 | 500    | `INTERNAL SERVER ERROR`     | Error inesperado del servidor                                     |
 | 503    | `SOURCES UNAVAILABLE ERROR` | Libro no encontrado y al menos una fuente externa ha fallado      |

@@ -58,6 +58,16 @@ class UsersDao extends Dao<DBUser> {
     return dbUserToEntity(dbUser)
   }
 
+  /** The users with the given ids, without their avatar. */
+  async findByIds (ids: readonly string[]): Promise<readonly UserEntity[]> {
+    const dbUsers = await this.collection
+      .find({ _id: { $in: [...ids] } })
+      .project<DBUser>({ avatar: 0 })
+      .toArray()
+
+    return dbUsers.map(dbUserToEntity).filter(isNotNull)
+  }
+
   async create (newUserData: CreateUser, role: Role): Promise<UserEntity> {
     const now = new Date()
     const dbUser: DBUser = {
