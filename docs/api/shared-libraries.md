@@ -223,6 +223,35 @@ La biblioteca no existe o no está compartida con el usuario.
 
 ---
 
+## GET /shared-libraries/:id/download
+
+Descarga los libros de una biblioteca compartida como fichero PDF o CSV. Los ficheros son los mismos que obtiene el propietario con [`GET /user-books/download`](user-books.md#get-user-booksdownload): solo llevan los datos del libro, sin valoraciones ni notas.
+
+### Query Params
+
+- `format`: string (opcional) — `pdf` (por defecto) o `csv`
+
+### Respuestas
+
+#### 200 OK
+
+Devuelve el fichero como descarga (`Content-Disposition: attachment`). El nombre del fichero es el de la biblioteca, sustituyendo los caracteres no alfanuméricos por `_`.
+
+| Formato | `Content-Type`             | Contenido                                                     |
+| ------- | -------------------------- | ------------------------------------------------------------- |
+| `pdf`   | `application/pdf`          | Nombre y descripción de la biblioteca y listado de sus libros |
+| `csv`   | `text/csv; charset=utf-8`  | Columnas `Título`, `Autor/es`, `Isbn-13`, `Isbn-10`           |
+
+#### 400 Bad Request
+
+`format` no es `pdf` ni `csv`.
+
+#### 404 Not Found
+
+La biblioteca no existe o no está compartida con el usuario.
+
+---
+
 ## DELETE /shared-libraries/:id
 
 El usuario autenticado sale de una biblioteca compartida con él. La biblioteca y sus libros no cambian, y los demás miembros conservan el acceso. Para volver a entrar, el propietario debe invitarlo de nuevo.

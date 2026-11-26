@@ -1,12 +1,17 @@
 import { AggregationCursor, WithId } from 'mongodb'
 import { DBUserBook } from '../resources/user-books/user-books.interfaces.js'
 import { PassThrough, Readable } from 'stream'
-import { LibraryEntity } from '../resources/libraries/libraries.entity.js'
 import { UserBookEntity } from '../resources/user-books/user-books.entity.js'
 import PDFDocument from 'pdfkit'
 
+/** The data of the library on the first page, the same for its owner and for its members */
+export interface PDFLibraryHeader {
+  name: string
+  description: string | null
+}
+
 export async function createLibraryBooksPDFStream (
-  library: LibraryEntity,
+  library: PDFLibraryHeader,
   booksCursor: AggregationCursor<WithId<DBUserBook>>,
   totalBooks: number,
   chunkSize = 100
@@ -51,7 +56,7 @@ function addHorizontalRule (doc: PDFKit.PDFDocument, spaceFromEdge = 0, linesAbo
   doc.moveDown(linesAboveAndBelow)
 }
 
-function setTitleAndDescription (doc: PDFKit.PDFDocument, library: LibraryEntity, totalBooks: number): void {
+function setTitleAndDescription (doc: PDFKit.PDFDocument, library: PDFLibraryHeader, totalBooks: number): void {
   doc.fontSize(20)
     .text(library.name, { align: 'center' })
     .fontSize(10)
@@ -124,7 +129,7 @@ function addPagination (doc: PDFKit.PDFDocument): void {
   }
 }
 
-export async function createLibraryBooksPDF (library: LibraryEntity, books: readonly UserBookEntity[]): Promise<Readable> {
+export async function createLibraryBooksPDF (library: PDFLibraryHeader, books: readonly UserBookEntity[]): Promise<Readable> {
   const doc = new PDFDocument({ margins: { top: 25, bottom: 25, left: 25, right: 25 }, bufferPages: true })
 
   setTitleAndDescription(doc, library, books.length)

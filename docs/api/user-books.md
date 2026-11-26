@@ -134,7 +134,7 @@ Falta `libraryId` o `format` no es `pdf` ni `csv`.
 
 #### 403 Forbidden
 
-La biblioteca pertenece a otro usuario.
+La biblioteca pertenece a otro usuario. Los miembros de una biblioteca compartida la descargan con [`GET /shared-libraries/:id/download`](shared-libraries.md#get-shared-librariesiddownload).
 
 #### 404 Not Found
 

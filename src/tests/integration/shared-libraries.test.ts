@@ -125,6 +125,7 @@ describe('access to the shared libraries', () => {
     ['GET', '/shared-libraries/owners'],
     ['GET', `/shared-libraries/${firstLibraryId}`],
     ['GET', `/shared-libraries/${firstLibraryId}/books`],
+    ['GET', `/shared-libraries/${firstLibraryId}/download`],
     ['DELETE', `/shared-libraries/${firstLibraryId}`]
   ]
 
@@ -563,6 +564,52 @@ describe('GET /shared-libraries/:id/books', () => {
   })
 })
 
+describe('GET /shared-libraries/:id/download', () => {
+  async function download (path: string, auth: string): Promise<Response> {
+    return await fetch(new URL(path, testUtils.TESTS_BASE_URL), { headers: { Authorization: auth } })
+  }
+
+  it('should export the same CSV as the owner gets, with the books of the owner', async () => {
+    const member = await download(`/shared-libraries/${firstLibraryId}/download?format=csv`, guestAuth)
+    const owner = await download(`/user-books/download?libraryId=${firstLibraryId}&format=csv`, ownerAuth)
+    const csv = await member.text()
+
+    expect(member.status).toBe(200)
+    expect(member.headers.get('content-type')).toBe('text/csv; charset=utf-8')
+    expect(member.headers.get('content-disposition')).toContain('sample_first_library.csv')
+    expect(csv).toBe(await owner.text())
+    // The header and the three books of the owner, not the copy of It Never Happened of the member
+    expect(csv.trim().split('\r\n')).toHaveLength(4)
+    expect(csv).toContain('Rossiya')
+  })
+
+  it('should export a PDF by default', async () => {
+    const response = await download(`/shared-libraries/${firstLibraryId}/download`, guestAuth)
+    const pdf = Buffer.from(await response.arrayBuffer())
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('content-type')).toBe('application/pdf')
+    expect(response.headers.get('content-disposition')).toContain('sample_first_library.pdf')
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
+  })
+
+  it('should not include the ratings nor the notes of the owner, even when the ratings are shared', async () => {
+    await setShareRatings(firstLibraryId, true)
+
+    const csv = await (await download(`/shared-libraries/${firstLibraryId}/download?format=csv`, guestAuth)).text()
+
+    expect(csv.split('\r\n')[0]).toBe('Título,Autor/es,Isbn-13,Isbn-10')
+    expect(csv).not.toContain(OWNER_NOTES)
+  })
+
+  it('should fail with an unknown format', async () => {
+    const { status, body } = await get(`/shared-libraries/${firstLibraryId}/download?format=xlsx`)
+
+    expect(status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
+  })
+})
+
 describe('privacy of the owner', () => {
   it('should not show any rating of the owner unless they are shared', async () => {
     const { body } = await get(`/shared-libraries/${firstLibraryId}/books`)
@@ -736,6 +783,7 @@ describe('end of the access', () => {
   async function expectNoAccess (): Promise<void> {
     expect((await get(`/shared-libraries/${firstLibraryId}`)).status).toBe(404)
     expect((await get(`/shared-libraries/${firstLibraryId}/books`)).status).toBe(404)
+    expect((await get(`/shared-libraries/${firstLibraryId}/download`)).status).toBe(404)
     expect((await get('/shared-libraries')).body.paginationInfo.total).toBe(0)
   }
 

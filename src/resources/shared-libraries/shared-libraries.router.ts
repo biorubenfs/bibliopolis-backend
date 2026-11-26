@@ -3,7 +3,7 @@ import handler from '../../handler.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 import { paginationQuerySchema } from '../../pagination.schema.js'
 import { HttpStatusCode } from '../../types.js'
-import { sharedLibrariesQuerySchema, sharedLibraryBooksQuerySchema } from './shared-libraries.schemas.js'
+import { sharedLibrariesQuerySchema, sharedLibraryBooksQuerySchema, sharedLibraryDownloadQuerySchema } from './shared-libraries.schemas.js'
 import sharedLibrariesService from './shared-libraries.service.js'
 
 const sharedLibrariesRouter = Router()
@@ -28,6 +28,11 @@ sharedLibrariesRouter.get('/:id', handler(async (req) => {
 sharedLibrariesRouter.get('/:id/books', queryParamsValidator(sharedLibraryBooksQuerySchema), handler(async (req) => {
   const { skip, limit, search } = req.query
   const result = await sharedLibrariesService.listBooks(req.params.id, req.userId ?? '', { skip, limit }, search)
+  return { status: HttpStatusCode.OK, data: result }
+}))
+
+sharedLibrariesRouter.get('/:id/download', queryParamsValidator(sharedLibraryDownloadQuerySchema), handler(async (req) => {
+  const result = await sharedLibrariesService.download(req.params.id, req.userId ?? '', req.query.format)
   return { status: HttpStatusCode.OK, data: result }
 }))
 

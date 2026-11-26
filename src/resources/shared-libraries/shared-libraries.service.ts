@@ -1,9 +1,11 @@
-import { CollectionResultObject, SingleResultObject } from '../../results.js'
+import { CollectionResultObject, SingleResultObject, StreamResultObject } from '../../results.js'
 import { Page } from '../../types.js'
 import librariesDao from '../libraries/libraries.dao.js'
 import { LibraryNotFoundError } from '../libraries/libraries.error.js'
 import { DBSharedLibrary, SharedLibrariesListFilter } from '../libraries/libraries.interfaces.js'
 import userBooksDao from '../user-books/user-books.dao.js'
+import userBooksService from '../user-books/user-books.service.js'
+import { DownloadFormat } from '../user-books/user-books.interfaces.js'
 import usersDao from '../users/users.dao.js'
 import { SharedLibraryEntity } from './shared-libraries.entity.js'
 import { SharedLibraryOwnerEntity } from './shared-library-owners.entity.js'
@@ -85,6 +87,12 @@ class SharedLibrariesService {
     const entities = books.map(book => new SharedLibraryBookEntity(book, opinionsByBook.get(book.bookId) ?? null))
 
     return new CollectionResultObject(entities, { ...page, total })
+  }
+
+  /** The same files as the owner gets: they have neither the ratings nor the notes */
+  async download (libraryId: string, userId: string, format?: DownloadFormat): Promise<StreamResultObject> {
+    const library = await this.getAccess(libraryId, userId)
+    return await userBooksService.exportLibrary({ ...library, id: library._id }, format)
   }
 
   async leave (libraryId: string, userId: string): Promise<void> {
