@@ -112,6 +112,7 @@ class UserBooksDao extends Dao<DBUserBook> {
   }
 
   async upsert (libraryId: string, userId: string, book: BookEntity, session: ClientSession): Promise<UserBookEntity | null> {
+    const now = new Date()
     const userBook = await this.collection.findOneAndUpdate(
       { userId, bookId: book.id },
       {
@@ -123,7 +124,9 @@ class UserBooksDao extends Dao<DBUserBook> {
           bookIsbn13: book.isbn13,
           bookIsbn10: book.isbn10,
           rating: null,
-          notes: null
+          notes: null,
+          createdAt: now,
+          updatedAt: now
         },
         // A book can be added by hand while an import of the same book is running
         $addToSet: { libraries: libraryId }
@@ -220,7 +223,7 @@ class UserBooksDao extends Dao<DBUserBook> {
     const upd = await this.collection.findOneAndUpdate(
       { _id: id, userId, 'libraries.0': { $exists: true } },
       {
-        $set: { ...data }
+        $set: { ...data, updatedAt: new Date() }
       },
       {
         returnDocument: 'after'

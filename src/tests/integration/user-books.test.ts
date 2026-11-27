@@ -267,4 +267,15 @@ describe('PATCH /user-books/:id', () => {
       await userBooksDao.collection.updateOne({ _id: removedId }, { $set: { libraries: [] } })
     }
   })
+
+  it('should change the update date but not the creation date', async () => {
+    const before = new Date()
+    const { status, body } = await patchUserBook(primerId, { rating: 7, notes: null })
+
+    expect(status).toBe(200)
+    expect(body.results.attributes.createdAt).toBe('2000-01-01T00:00:00.000Z')
+    expect(new Date(body.results.attributes.updatedAt).getTime()).toBeGreaterThanOrEqual(before.getTime())
+    const stored = await userBooksDao.collection.findOne({ _id: primerId })
+    expect(stored?.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime())
+  })
 })

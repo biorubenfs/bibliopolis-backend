@@ -20,6 +20,8 @@ pnpm run test:integration # solo src/tests/integration (replica set de Mongo en 
 pnpm run test:coverage
 
 pnpm run seed             # carga data/seed/*.json en MONGO_URI (hacer build antes)
+pnpm run migrate:<nombre> # migraciones de datos en MONGO_URI (src/scripts/migrate-*.ts; hacer build antes). Se pueden repetir sin efecto.
+                          # En el VPS: docker exec <contenedor> node dist/scripts/migrate-<nombre>.js
 
 pnpm run docs:dev         # mkdocs serve en http://127.0.0.1:8001 (el 8000 lo ocupa Portainer)
 mkdocs build --strict     # comprueba la documentación (falla con enlaces rotos o páginas fuera del nav)
