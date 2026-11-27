@@ -4,7 +4,7 @@ import { runInTransaction } from '../../transaction-helper.js'
 import { BookCover, Page } from '../../types.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
 import { CoverSize, getBookFromSourcesApis, getCoverUrl } from '../../utils.js'
-import { BookSyncData, CreateBook, NewBook, UpdateBook } from '../books/books.interfaces.js'
+import { BookSyncData, BooksListFilter, CreateBook, NewBook, UpdateBook } from '../books/books.interfaces.js'
 import { fetchCoverFromSource, fetchCoversFromSources } from '../sources/sources.covers.js'
 import userBooksDao from '../user-books/user-books.dao.js'
 import booksDao from './books.dao.js'
@@ -125,10 +125,10 @@ class BooksService {
     return book
   }
 
-  async list (page: Page, search?: string): Promise<CollectionResultObject<BookEntity>> {
+  async list (page: Page, filter: BooksListFilter = {}): Promise<CollectionResultObject<BookEntity>> {
     const [books, total] = await Promise.all([
-      booksDao.list(page.skip, page.limit, search),
-      booksDao.count(search)
+      booksDao.list(page.skip, page.limit, filter),
+      booksDao.count(filter)
     ])
 
     return new CollectionResultObject(books, { ...page, total })

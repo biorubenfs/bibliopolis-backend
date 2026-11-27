@@ -85,5 +85,6 @@ export const updateBookSchema = z.object({
 )
 
 export const booksQuerySchema = paginationQuerySchema.extend({
-  search: z.string().trim().max(100).optional()
+  search: z.string().trim().max(100).optional(),
+  hasCover: z.enum(['true', 'false']).optional()
 })

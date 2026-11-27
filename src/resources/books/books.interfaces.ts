@@ -16,4 +16,10 @@ export interface NewBookDao {
   cover: BookCover
 }
 
+export interface BooksListFilter {
+  search?: string
+  // true: only the books with a cover; false: only those without one
+  hasCover?: boolean
+}
+
 export type DBBook = Omit<BookEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }

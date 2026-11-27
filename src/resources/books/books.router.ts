@@ -35,8 +35,9 @@ booksRouter.get('/:id', handler(async (req) => {
 }))
 
 booksRouter.get('/', queryParamsValidator(booksQuerySchema), handler(async (req) => {
-  const { skip, limit, search } = req.query
-  const results = await booksService.list({ skip, limit }, search)
+  const { skip, limit, search, hasCover } = req.query
+  const filter = { search, hasCover: hasCover != null ? hasCover === 'true' : undefined }
+  const results = await booksService.list({ skip, limit }, filter)
 
   return { status: HttpStatusCode.OK, data: results }
 }))

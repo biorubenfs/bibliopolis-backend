@@ -1,13 +1,25 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
-import { BookSyncData, DBBook, NewBookDao } from './books.interfaces.js'
+import { BookSyncData, BooksListFilter, DBBook, NewBookDao } from './books.interfaces.js'
 import { BookEntity } from './books.entity.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
 import { ClientSession, Filter } from 'mongodb'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
 
-function listBooksMongoFilter (search?: string): Filter<DBBook> {
-  if (search == null || search === '') return {}
+function listBooksMongoFilter ({ search, hasCover }: BooksListFilter): Filter<DBBook> {
+  const filters = [searchMongoFilter(search), coverMongoFilter(hasCover)].filter(isNotNull)
+  if (filters.length === 0) return {}
+  return filters.length === 1 ? filters[0] : { $and: filters }
+}
+
+function coverMongoFilter (hasCover?: boolean): Filter<DBBook> | null {
+  if (hasCover == null) return null
+  // A book without a cover has { source: null, value: null }
+  return hasCover ? { 'cover.value': { $ne: null } } : { 'cover.value': null }
+}
+
+function searchMongoFilter (search?: string): Filter<DBBook> | null {
+  if (search == null || search === '') return null
 
   // An ISBN is matched exactly, under any of its two forms; anything else, as a substring of the title or the authors
   const isbn = ISBNUtils.sanitizeIsbn(search)
@@ -63,15 +75,15 @@ class BooksDao extends Dao<DBBook> {
     return dbBookToEntity(dbBook)
   }
 
-  async list (skip: number, limit: number, search?: string): Promise<readonly BookEntity[]> {
+  async list (skip: number, limit: number, filter: BooksListFilter): Promise<readonly BookEntity[]> {
     // Newest first: ULIDs sort by creation time, and _id is indexed while createdAt is not
-    const dbBooks = await this.collection.find(listBooksMongoFilter(search)).sort({ _id: -1 }).skip(skip).limit(limit).toArray()
+    const dbBooks = await this.collection.find(listBooksMongoFilter(filter)).sort({ _id: -1 }).skip(skip).limit(limit).toArray()
 
     return dbBooks.map(dbBookToEntity).filter(isNotNull)
   }
 
-  async count (search?: string): Promise<number> {
-    const total = await this.collection.countDocuments(listBooksMongoFilter(search))
+  async count (filter: BooksListFilter): Promise<number> {
+    const total = await this.collection.countDocuments(listBooksMongoFilter(filter))
     return total
   }
 

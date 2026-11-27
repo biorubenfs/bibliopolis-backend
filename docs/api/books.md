@@ -168,6 +168,7 @@ Lista los libros del catálogo, del añadido más recientemente al más antiguo.
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
 - `search`: string (opcional, máx. 100 caracteres) — Si es un ISBN-10 o ISBN-13 válido (con o sin guiones), busca el libro con ese ISBN exacto. Si no, busca el texto en el título o en los autores, sin distinguir mayúsculas y de forma literal
+- `hasCover`: `true` | `false` (opcional) — `true` devuelve solo los libros con portada y `false`, solo los que no la tienen. Sin él se devuelven todos. Se combina con `search`, y `paginationInfo.total` cuenta solo los libros que cumplen el filtro
 
 ### Respuestas
 
