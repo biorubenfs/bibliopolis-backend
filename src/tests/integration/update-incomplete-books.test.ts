@@ -61,6 +61,8 @@ async function insertBook (authors: string[], cover: BookCover): Promise<void> {
     bookIsbn10: null,
     rating: null,
     notes: null,
+    readingStatus: null,
+    finishedAt: null,
     userId: 'sync-user',
     createdAt: OLD_DATE,
     updatedAt: OLD_DATE

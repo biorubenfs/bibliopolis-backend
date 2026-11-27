@@ -13,6 +13,7 @@ import { DBImportItem, ImportItemOutcome, ImportStatus } from '../../resources/i
 import { ImportsWorker } from '../../resources/imports/imports.worker.js'
 import librariesDao from '../../resources/libraries/libraries.dao.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
+import { ReadingStatus } from '../../resources/user-books/user-books.interfaces.js'
 import { Role } from '../../resources/users/users.interfaces.js'
 import testUtils from '../utils/utils.js'
 
@@ -352,6 +353,8 @@ describe('imports worker', () => {
     const userBook = await userBooksDao.collection.findOne({ userId: USER_ID, bookIsbn13: ISBN_NEW })
     const library = await librariesDao.findById(LIBRARY_ID)
     expect(userBook?.libraries).toEqual([LIBRARY_ID])
+    expect(userBook?.readingStatus).toBeNull()
+    expect(userBook?.finishedAt).toBeNull()
     expect(library?.books).toContain(userBook?._id)
     expect(library?.books.filter(id => id === userBook?._id)).toHaveLength(1)
   })
@@ -367,6 +370,8 @@ describe('imports worker', () => {
   })
 
   it('should add a book the user owns in another library to this one as well', async () => {
+    const finishedAt = new Date('2026-03-14T00:00:00.000Z')
+    await userBooksDao.collection.updateOne({ userId: USER_ID, bookIsbn13: ISBN_IN_LIBRARY }, { $set: { readingStatus: ReadingStatus.READ, finishedAt } })
     const importId = await createImport({ csv: csvOf(ISBN_IN_LIBRARY), libraryId: OTHER_LIBRARY_ID })
     stubSources(tooManyRequests)
 
@@ -375,6 +380,9 @@ describe('imports worker', () => {
     expect((await itemsByOutcome(importId))[ISBN_IN_LIBRARY]).toBe(ImportItemOutcome.Added)
     const userBook = await userBooksDao.collection.findOne({ userId: USER_ID, bookIsbn13: ISBN_IN_LIBRARY })
     expect(userBook?.libraries).toEqual(expect.arrayContaining([LIBRARY_ID, OTHER_LIBRARY_ID]))
+    // The same user book: it keeps the reading status
+    expect(userBook?.readingStatus).toBe(ReadingStatus.READ)
+    expect(userBook?.finishedAt).toEqual(finishedAt)
   })
 
   it('should report a 429 from a source as source_error, never as not_found', async () => {

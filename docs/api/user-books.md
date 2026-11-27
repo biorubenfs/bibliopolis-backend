@@ -1,6 +1,6 @@
 # API de User Books
 
-Un user book es el ejemplar de un libro que tiene un usuario. Se crea al añadir un libro a una biblioteca ([`POST /libraries/:id/books`](libraries.md#post-librariesidbooks)) y puede pertenecer a varias bibliotecas del mismo usuario. Guarda una copia de los datos del libro (título, autores, portada e ISBN) junto con la valoración y las notas del usuario. Cuando un administrador corrige un libro ([`PATCH /books/:id`](books.md#patch-booksid)), el título, los autores y la portada se actualizan en todos sus user books; su `updatedAt` no cambia.
+Un user book es el ejemplar de un libro que tiene un usuario. Se crea al añadir un libro a una biblioteca ([`POST /libraries/:id/books`](libraries.md#post-librariesidbooks)) y puede pertenecer a varias bibliotecas del mismo usuario. Guarda una copia de los datos del libro (título, autores, portada e ISBN) junto con la valoración, las notas y el estado de lectura del usuario. Cuando un administrador corrige un libro ([`PATCH /books/:id`](books.md#patch-booksid)), el título, los autores y la portada se actualizan en todos sus user books; su `updatedAt` no cambia.
 
 Todos los endpoints son solo para usuarios `regular`: un administrador recibe un `403` (`must be a regular user`).
 
@@ -17,6 +17,8 @@ Atributos de un user book:
 | `bookIsbn10`   | string/null | ISBN-10                                          |
 | `rating`       | number/null | Valoración del usuario (de 1 a 10)               |
 | `notes`        | string/null | Notas del usuario                                |
+| `readingStatus` | string/null | Estado de lectura: `to_read` (pendiente), `reading` (leyendo), `read` (leído) o `null` (sin estado). Empieza en `null` |
+| `finishedAt`   | string/null | Día en que se terminó de leer (`YYYY-MM-DD`). Solo puede tenerlo un libro `read`, y puede no tenerlo. Empieza en `null` |
 | `userId`       | string      | ID del usuario propietario                       |
 | `createdAt`    | date        | Fecha de creación                                |
 | `updatedAt`    | date        | Fecha de la última modificación                  |
@@ -57,6 +59,8 @@ Los resultados se ordenan por ID de forma descendente, es decir, del añadido m�
         "bookIsbn10": "059538529X",
         "rating": 5,
         "notes": "Lorem ipsum",
+        "readingStatus": null,
+        "finishedAt": null,
         "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -165,6 +169,8 @@ Obtiene un user book del usuario autenticado.
       "bookIsbn10": null,
       "rating": 10,
       "notes": null,
+      "readingStatus": null,
+      "finishedAt": null,
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -189,23 +195,33 @@ El user book no existe o pertenece a otro usuario.
 
 ## PATCH /user-books/:id
 
-Modifica la valoración y las notas de un user book del usuario autenticado. Solo se pueden modificar los campos `rating` y `notes`, y ambos son obligatorios (se puede enviar `null` para borrarlos).
+Modifica la valoración, las notas y el estado de lectura de un user book del usuario autenticado. Solo se pueden modificar los campos `rating`, `notes`, `readingStatus` y `finishedAt`, y los cuatro son obligatorios (se puede enviar `null` para borrarlos). Actualiza `updatedAt`.
 
-El user book debe estar en alguna biblioteca: uno que se ha quitado de todas conserva su valoración y sus notas, pero no se puede modificar hasta que se vuelva a añadir a una.
+El user book debe estar en alguna biblioteca: uno que se ha quitado de todas conserva su valoración, sus notas y su estado, pero no se puede modificar hasta que se vuelva a añadir a una.
+
+Reglas del estado de lectura:
+
+- `finishedAt` solo puede tener valor si `readingStatus` es `read`. Un libro leído puede no tener fecha.
+- Al pasar un libro leído a otro estado hay que enviar `finishedAt: null`: la fecha se borra.
+- `finishedAt` es un día sin hora (`YYYY-MM-DD`) y se guarda a las 00:00 UTC. No puede ser posterior a mañana en UTC: se admite mañana porque, por delante de UTC, ya puede ser ese día.
 
 ### Body
 
 ```json
 {
   "rating": 5,
-  "notes": "a simple note about the book"
+  "notes": "a simple note about the book",
+  "readingStatus": "read",
+  "finishedAt": "2026-03-14"
 }
 ```
 
-| Campo    | Tipo        | Requerido | Descripción                                  |
-| -------- | ----------- | --------- | -------------------------------------------- |
-| `rating` | number/null | Sí        | Valoración del libro: entero de 1 a 10       |
-| `notes`  | string/null | Sí        | Notas sobre el libro (máx. 150 caracteres)   |
+| Campo           | Tipo        | Requerido | Descripción                                                          |
+| --------------- | ----------- | --------- | -------------------------------------------------------------------- |
+| `rating`        | number/null | Sí        | Valoración del libro: entero de 1 a 10                               |
+| `notes`         | string/null | Sí        | Notas sobre el libro (máx. 150 caracteres)                           |
+| `readingStatus` | string/null | Sí        | `to_read`, `reading`, `read` o `null`                                 |
+| `finishedAt`    | string/null | Sí        | Día en que se terminó (`YYYY-MM-DD`); solo con `readingStatus: read` |
 
 ### Respuestas
 
@@ -228,6 +244,8 @@ Devuelve el user book actualizado.
       "bookIsbn10": null,
       "rating": 5,
       "notes": "a simple note about the book",
+      "readingStatus": "read",
+      "finishedAt": "2026-03-14",
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -274,6 +292,25 @@ Errores de validación en el body de la petición.
 }
 ```
 
+Una fecha de fin en un libro que no está leído:
+
+```json
+{
+  "statusCode": 400,
+  "errorCode": "VALIDATION ERROR",
+  "message": "invalid body",
+  "validationError": [
+    {
+      "code": "custom",
+      "path": ["finishedAt"],
+      "message": "only a read book can have a finish date"
+    }
+  ]
+}
+```
+
+Con una fecha futura, el mensaje es `the finish date cannot be in the future`.
+
 #### 404 Not Found
 
 El user book no existe, pertenece a otro usuario o no está en ninguna biblioteca.
@@ -292,3 +329,5 @@ El user book no existe, pertenece a otro usuario o no está en ninguna bibliotec
 
 - Los datos del libro (título, autores, portada, ISBN) se copian del catálogo al crear el user book y se mantienen sincronizados por la tarea semanal que completa autores y portadas.
 - Quitar un libro de una biblioteca o eliminar la biblioteca no borra el user book: solo se quita la biblioteca de su lista `libraries`.
+- El estado de lectura es personal, como las notas: no se muestra a los miembros de las bibliotecas compartidas ni sale en las exportaciones. Añadir a otra biblioteca, a mano o con una importación, un libro que el usuario ya tiene conserva su estado.
+- Los user books creados antes del estado de lectura se migran con `pnpm run migrate:user-books-reading-status`, y los que no tenían `createdAt`/`updatedAt` con `pnpm run migrate:user-books-timestamps`.

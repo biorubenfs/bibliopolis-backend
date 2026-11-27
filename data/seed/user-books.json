@@ -7,6 +7,8 @@
     "bookAuthors": ["Alex Shishin"],
     "notes": "Lorem ipsum",
     "rating": 5,
+    "readingStatus": "read",
+    "finishedAt": "2026-03-14T00:00:00.000Z",
     "bookCover": {
       "source": "open_library",
       "value": "1304487"
@@ -26,6 +28,8 @@
     "bookId": "01J9KKFTWAKVR1HGHCER50JJMQ",
     "notes": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer lobortis libero id sem egestas, ut scelerisque nisi mattis. Maecenas auctor. ",
     "rating": null,
+    "readingStatus": "reading",
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": "1715106"
@@ -44,6 +48,8 @@
     "bookId": "01J9KKFQRP6H3F30CNT21G1DWT",
     "notes": null,
     "rating": 10,
+    "readingStatus": "to_read",
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": "12861662"

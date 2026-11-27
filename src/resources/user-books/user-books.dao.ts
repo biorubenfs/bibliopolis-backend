@@ -125,6 +125,8 @@ class UserBooksDao extends Dao<DBUserBook> {
           bookIsbn10: book.isbn10,
           rating: null,
           notes: null,
+          readingStatus: null,
+          finishedAt: null,
           createdAt: now,
           updatedAt: now
         },

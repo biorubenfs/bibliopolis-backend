@@ -31,6 +31,8 @@ const extraUserBooks = [
     bookIsbn13: '9780307474728',
     bookIsbn10: '0307474720',
     notes: null,
+    readingStatus: null,
+    finishedAt: null,
     rating: null,
     bookCover: { source: 'open_library', value: null },
     createdAt: new Date('2000-01-01T00:00:00.000Z'),
@@ -46,6 +48,8 @@ const extraUserBooks = [
     bookIsbn13: '9780321714114',
     bookIsbn10: '0321714113',
     notes: null,
+    readingStatus: null,
+    finishedAt: null,
     rating: null,
     bookCover: { source: 'open_library', value: null },
     createdAt: new Date('2000-01-01T00:00:00.000Z'),
@@ -62,6 +66,8 @@ const extraUserBooks = [
     bookIsbn13: '9780000000002',
     bookIsbn10: '0000000002',
     notes: null,
+    readingStatus: null,
+    finishedAt: null,
     rating: null,
     bookCover: { source: 'open_library', value: null },
     createdAt: new Date('2000-01-01T00:00:00.000Z'),
@@ -244,7 +250,7 @@ describe('GET /user-books?search', () => {
 
 describe('PATCH /user-books/:id', () => {
   it('should reject an opinion on a book that is not in any library', async () => {
-    const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'not mine anymore' })
+    const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'not mine anymore', readingStatus: null, finishedAt: null })
 
     expect(status).toBe(404)
     expect(body.errorCode).toBe(ApiRestErrorCode.NotFoundError)
@@ -258,7 +264,7 @@ describe('PATCH /user-books/:id', () => {
     await userBooksDao.collection.updateOne({ _id: removedId }, { $set: { libraries: [secondLibraryId] } })
 
     try {
-      const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'mine again' })
+      const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'mine again', readingStatus: null, finishedAt: null })
 
       expect(status).toBe(200)
       expect(body.results.attributes.rating).toBe(8)
@@ -270,12 +276,111 @@ describe('PATCH /user-books/:id', () => {
 
   it('should change the update date but not the creation date', async () => {
     const before = new Date()
-    const { status, body } = await patchUserBook(primerId, { rating: 7, notes: null })
+    const { status, body } = await patchUserBook(primerId, { rating: 7, notes: null, readingStatus: null, finishedAt: null })
 
     expect(status).toBe(200)
     expect(body.results.attributes.createdAt).toBe('2000-01-01T00:00:00.000Z')
     expect(new Date(body.results.attributes.updatedAt).getTime()).toBeGreaterThanOrEqual(before.getTime())
     const stored = await userBooksDao.collection.findOne({ _id: primerId })
     expect(stored?.updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime())
+  })
+})
+
+describe('PATCH /user-books/:id - reading status', () => {
+  const opinion = { rating: null, notes: null }
+
+  /** A day as YYYY-MM-DD, counted from today in UTC. */
+  function utcDay (offsetDays: number): string {
+    return new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+  }
+
+  it('should start without a reading status', async () => {
+    const { status, body } = await listUserBooks({ libraryId: secondLibraryId })
+
+    expect(status).toBe(200)
+    for (const result of body.results) {
+      expect(result.attributes.readingStatus).toBeNull()
+      expect(result.attributes.finishedAt).toBeNull()
+    }
+  })
+
+  it.each(['to_read', 'reading', 'read', null])('should set the status %s without a finish date', async (readingStatus) => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus, finishedAt: null })
+
+    expect(status).toBe(200)
+    expect(body.results.attributes.readingStatus).toBe(readingStatus)
+    expect(body.results.attributes.finishedAt).toBeNull()
+  })
+
+  it('should store the finish date of a read book as a day at 00:00 UTC', async () => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'read', finishedAt: '2026-03-14' })
+
+    expect(status).toBe(200)
+    expect(body.results.attributes.readingStatus).toBe('read')
+    expect(body.results.attributes.finishedAt).toBe('2026-03-14')
+    const stored = await userBooksDao.collection.findOne({ _id: primerId })
+    expect(stored?.finishedAt).toEqual(new Date('2026-03-14T00:00:00.000Z'))
+  })
+
+  it('should clear the finish date when a read book goes back to another status', async () => {
+    await patchUserBook(primerId, { ...opinion, readingStatus: 'read', finishedAt: '2026-03-14' })
+
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'to_read', finishedAt: null })
+
+    expect(status).toBe(200)
+    expect(body.results.attributes.finishedAt).toBeNull()
+    const stored = await userBooksDao.collection.findOne({ _id: primerId })
+    expect(stored?.readingStatus).toBe('to_read')
+    expect(stored?.finishedAt).toBeNull()
+  })
+
+  it.each(['to_read', 'reading', null])('should reject a finish date with the status %s', async (readingStatus) => {
+    const before = await userBooksDao.collection.findOne({ _id: primerId })
+
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus, finishedAt: '2026-03-14' })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['finishedAt'])
+    expect(body.validationError[0].message).toBe('only a read book can have a finish date')
+    expect(await userBooksDao.collection.findOne({ _id: primerId })).toEqual(before)
+  })
+
+  it('should accept tomorrow in UTC, which is already today ahead of UTC', async () => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'read', finishedAt: utcDay(1) })
+
+    expect(status).toBe(200)
+    expect(body.results.attributes.finishedAt).toBe(utcDay(1))
+  })
+
+  it('should reject a finish date in the future', async () => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'read', finishedAt: utcDay(2) })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['finishedAt'])
+    expect(body.validationError[0].message).toBe('the finish date cannot be in the future')
+  })
+
+  it.each(['14/03/2026', '2026-02-30', '2026-03-14T10:00:00.000Z', ''])('should reject the finish date %j', async (finishedAt) => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'read', finishedAt })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['finishedAt'])
+  })
+
+  it('should reject an unknown status', async () => {
+    const { status, body } = await patchUserBook(primerId, { ...opinion, readingStatus: 'abandoned', finishedAt: null })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['readingStatus'])
+  })
+
+  it.each(['readingStatus', 'finishedAt'])('should require %s', async (field) => {
+    const fullBody: Record<string, unknown> = { ...opinion, readingStatus: null, finishedAt: null }
+    const { [field]: _missing, ...body } = fullBody
+
+    const response = await patchUserBook(primerId, body)
+
+    expect(response.status).toBe(400)
+    expect(response.body.validationError[0].path).toEqual([field])
   })
 })

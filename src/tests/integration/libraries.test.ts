@@ -568,6 +568,8 @@ describe('libraries books management tests', async () => {
     expect(stored?.createdAt).toBeInstanceOf(Date)
     expect(stored?.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime())
     expect(stored?.updatedAt).toEqual(stored?.createdAt)
+    expect(stored?.readingStatus).toBeNull()
+    expect(stored?.finishedAt).toBeNull()
   })
 
   it('POST /libraries/:id/books - should keep the creation date of a user book added to another library', async () => {
@@ -870,7 +872,7 @@ describe('user-books tests', async () => {
 
     const url = new URL(`user-books/${userBookId}`, testUtils.TESTS_BASE_URL)
 
-    const body = { rating: 6, notes: 'loremipsum' }
+    const body = { rating: 6, notes: 'loremipsum', readingStatus: null, finishedAt: null }
 
     const response = await fetch(url, {
       headers: {
@@ -896,7 +898,7 @@ describe('user-books tests', async () => {
 
     const url = new URL(`user-books/${userBookId}`, testUtils.TESTS_BASE_URL)
 
-    const body = { rating: 6, notes: 'loremipsum' }
+    const body = { rating: 6, notes: 'loremipsum', readingStatus: null, finishedAt: null }
 
     const response = await fetch(url, {
       headers: {

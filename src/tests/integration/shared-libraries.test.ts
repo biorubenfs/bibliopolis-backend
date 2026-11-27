@@ -7,7 +7,7 @@ import { ApiRestErrorCode } from '../../error/types.js'
 import { makeJwt } from '../../resources/auth/auth.utils.js'
 import librariesDao from '../../resources/libraries/libraries.dao.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
-import { DBUserBook } from '../../resources/user-books/user-books.interfaces.js'
+import { DBUserBook, ReadingStatus } from '../../resources/user-books/user-books.interfaces.js'
 import usersDao from '../../resources/users/users.dao.js'
 import { DBUser, Role } from '../../resources/users/users.interfaces.js'
 import robohashApi from '../../resources/users/robohash/robohash.api.js'
@@ -98,6 +98,8 @@ function newGuestRossiya (data: Partial<DBUserBook>): DBUserBook {
     bookIsbn10: '059538529X',
     rating: null,
     notes: null,
+    readingStatus: null,
+    finishedAt: null,
     createdAt: now,
     updatedAt: now,
     ...data
@@ -192,7 +194,7 @@ describe('access to the shared libraries', () => {
 
   it('a member should not read nor change the user books of the owner', async () => {
     const read = await request('GET', `/user-books/${ownerRossiyaId}`, guestAuth)
-    const changed = await request('PATCH', `/user-books/${ownerRossiyaId}`, guestAuth, { rating: 1, notes: null })
+    const changed = await request('PATCH', `/user-books/${ownerRossiyaId}`, guestAuth, { rating: 1, notes: null, readingStatus: null, finishedAt: null })
 
     expect(read.status).toBe(404)
     expect(changed.status).toBe(404)
@@ -654,6 +656,26 @@ describe('privacy of the owner', () => {
       expect(text).not.toContain('user01@email.com')
       // Nor the other members
       expect(text).not.toContain(otherGuestId)
+    }
+  })
+
+  it.each([true, false])('should never show the reading status of the owner, with shareRatings %s', async (shareRatings) => {
+    await setShareRatings(firstLibraryId, shareRatings)
+    await userBooksDao.collection.updateOne(
+      { _id: ownerRossiyaId },
+      { $set: { readingStatus: ReadingStatus.READ, finishedAt: new Date('2026-03-14T00:00:00.000Z') } }
+    )
+
+    const responses = await Promise.all([
+      get(`/shared-libraries/${firstLibraryId}`),
+      get(`/shared-libraries/${firstLibraryId}/books`)
+    ])
+
+    for (const { status, text } of responses) {
+      expect(status).toBe(200)
+      expect(text).not.toContain('readingStatus')
+      expect(text).not.toContain('finishedAt')
+      expect(text).not.toContain('2026-03-14')
     }
   })
 
