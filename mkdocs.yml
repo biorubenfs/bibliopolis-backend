@@ -11,6 +11,7 @@ nav:
       - Books: api/books.md
       - Libraries: api/libraries.md
       - Shared Libraries: api/shared-libraries.md
+      - Public Libraries: api/public-libraries.md
       - User Books: api/user-books.md
       - External: api/external.md
       - Imports: api/imports.md

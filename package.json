@@ -12,6 +12,7 @@
     "enrich-isbn10": "node ./dist/scripts/enrich-isbn10.js",
     "migrate:user-books-timestamps": "node ./dist/scripts/migrate-user-books-timestamps.js",
     "migrate:user-books-reading-status": "node ./dist/scripts/migrate-user-books-reading-status.js",
+    "migrate:libraries-visibility": "node ./dist/scripts/migrate-libraries-visibility.js",
     "test": "ENVIRONMENT='test' vitest run --pool=forks --reporter=verbose",
     "test:dev": "pnpm run --silent build && ENVIRONMENT='test' vitest run --pool=forks --reporter=verbose",
     "test:unit": "ENVIRONMENT='test' vitest run --config=vitest.config.unit.ts --reporter=verbose",

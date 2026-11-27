@@ -13,11 +13,12 @@ import { SharedLibraryBookEntity } from './shared-library-books.entity.js'
 
 type SharedLibrariesQuery = Pick<SharedLibrariesListFilter, 'search' | 'ownerId'>
 
-/** Read-only access of the members to the libraries of other users. */
+/** Read-only access to the libraries of other users: the ones shared with the user, and the public ones. */
 class SharedLibrariesService {
   /**
-   * The only gate to a shared library, checked in the database on each request. Without access it does not exist:
-   * the answer is the same for a library that was never shared, is no longer shared or has been deleted.
+   * The only gate to the library of another user, checked in the database on each request: the user must be a member or
+   * the library must be public. Without access it does not exist: the answer is the same for a library that was never
+   * shared, is no longer shared or public, or has been deleted.
    */
   private async getAccess (libraryId: string, userId: string): Promise<DBSharedLibrary> {
     const library = await librariesDao.findShared(libraryId, userId)
@@ -78,6 +79,7 @@ class SharedLibrariesService {
     const library = await this.getAccess(libraryId, userId)
 
     const [books, total] = await Promise.all([
+      // shareRatings is already false for who is not a member
       userBooksDao.listShared(library.userId, libraryId, search, library.shareRatings, page),
       userBooksDao.count({ userId: library.userId, librariesIds: [libraryId], search })
     ])

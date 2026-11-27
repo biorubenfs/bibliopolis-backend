@@ -377,6 +377,8 @@ describe('libraries CRUD basic tests', async () => {
       shareRatings: false,
       tagIds: [],
       members: [],
+      isPublic: false,
+      publishedAt: null,
       userId,
       createdAt: now,
       updatedAt: now
@@ -439,6 +441,8 @@ describe('libraries CRUD basic tests', async () => {
       shareRatings: false,
       tagIds: [],
       members: [],
+      isPublic: false,
+      publishedAt: null,
       userId: ownerId,
       createdAt: now,
       updatedAt: now
@@ -705,6 +709,8 @@ describe('libraries books management tests', async () => {
       shareRatings: false,
       tagIds: [],
       members: [],
+      isPublic: false,
+      publishedAt: null,
       userId,
       createdAt: now,
       updatedAt: now

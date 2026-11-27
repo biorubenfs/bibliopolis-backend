@@ -1,10 +1,10 @@
 # API de Bibliotecas compartidas
 
-Este documento describe los endpoints con los que un usuario consulta las [bibliotecas](libraries.md) que otros han compartido con él. El acceso es de **solo lectura**: solo el propietario puede modificar la biblioteca y gestionar sus miembros ([`/libraries/:id/members`](libraries.md#get-librariesidmembers)).
+Este documento describe los endpoints con los que un usuario consulta las [bibliotecas](libraries.md) que otros han compartido con él. Los endpoints de una biblioteca (`/shared-libraries/:id/…`, salvo `DELETE`) sirven también para las bibliotecas **públicas** de otros usuarios, que se listan en [`/public-libraries`](public-libraries.md). El acceso es de **solo lectura**: solo el propietario puede modificar la biblioteca y gestionar sus miembros ([`/libraries/:id/members`](libraries.md#get-librariesidmembers)).
 
 Todos los endpoints son solo para usuarios `regular`: un administrador recibe un `403` (`must be a regular user`).
 
-El acceso se comprueba en cada petición: cuando el propietario retira a un miembro o borra la biblioteca, deja de tener acceso de inmediato, aunque su token siga siendo válido. Una biblioteca a la que no se tiene acceso responde un `404`, igual que si no existiera. También para su propietario, que la consulta en [`/libraries`](libraries.md).
+Se tiene acceso a una biblioteca de otro usuario si se es miembro **o** si es pública. El acceso se comprueba en cada petición: cuando el propietario retira a un miembro, la hace privada o la borra, se deja de tener acceso de inmediato, aunque el token siga siendo válido. Una biblioteca a la que no se tiene acceso responde un `404`, igual que si no existiera. También para su propietario, que la consulta en [`/libraries`](libraries.md), aunque sea pública.
 
 Atributos de una biblioteca compartida (su `id` es el de la biblioteca):
 
@@ -14,8 +14,10 @@ Atributos de una biblioteca compartida (su `id` es el de la biblioteca):
 | `description`  | string \| null | Descripción de la biblioteca, o `null` si no tiene                      |
 | `ownerName`    | string         | Nombre del propietario                                                  |
 | `booksCount`   | number         | Número de libros que contiene                                           |
-| `shareRatings` | boolean        | Si el propietario muestra sus valoraciones a los miembros               |
-| `sharedAt`     | date           | Fecha en la que se compartió con el usuario                             |
+| `shareRatings` | boolean        | Si el usuario ve las valoraciones del propietario: el propietario las muestra a los miembros y el usuario es uno de ellos. Siempre `false` si `access` es `public` |
+| `isPublic`     | boolean        | Si la biblioteca es pública                                             |
+| `access`       | string         | Por qué la ve el usuario: `member` (es miembro, aunque además sea pública) o `public` (solo porque es pública) |
+| `sharedAt`     | date \| null   | Fecha en la que se compartió con el usuario, o `null` si `access` es `public` |
 
 Atributos de un libro de una biblioteca compartida (su `id` es el del libro en el catálogo, [`books`](books.md)):
 
@@ -35,7 +37,7 @@ Las notas del propietario no se devuelven nunca, ni las opiniones de los demás 
 
 ## GET /shared-libraries
 
-Lista las bibliotecas compartidas con el usuario autenticado, empezando por la compartida más recientemente. Admite [paginación](../index.md#paginacion).
+Lista las bibliotecas compartidas con el usuario autenticado, empezando por la compartida más recientemente. No incluye las públicas de las que no es miembro: esas están en [`GET /public-libraries`](public-libraries.md#get-public-libraries). Admite [paginación](../index.md#paginacion).
 
 ### Query Params
 
@@ -60,6 +62,8 @@ Lista las bibliotecas compartidas con el usuario autenticado, empezando por la c
         "ownerName": "user01",
         "booksCount": 3,
         "shareRatings": false,
+        "isPublic": false,
+        "access": "member",
         "sharedAt": "2000-01-01T00:00:00.000Z"
       }
     }
@@ -121,7 +125,7 @@ Parámetros de paginación no válidos.
 
 ## GET /shared-libraries/:id
 
-Obtiene una biblioteca compartida con el usuario autenticado.
+Obtiene una biblioteca compartida con el usuario autenticado, o una biblioteca pública de otro usuario.
 
 ### Respuestas
 
@@ -138,6 +142,8 @@ Obtiene una biblioteca compartida con el usuario autenticado.
       "ownerName": "user01",
       "booksCount": 3,
       "shareRatings": false,
+      "isPublic": false,
+      "access": "member",
       "sharedAt": "2000-01-01T00:00:00.000Z"
     }
   }
@@ -146,7 +152,7 @@ Obtiene una biblioteca compartida con el usuario autenticado.
 
 #### 404 Not Found
 
-La biblioteca no existe o no está compartida con el usuario.
+La biblioteca no existe, es del propio usuario, o ni está compartida con él ni es pública.
 
 ```json
 {
@@ -219,7 +225,7 @@ Parámetros de paginación no válidos, o `search` repetido o con más de 100 ca
 
 #### 404 Not Found
 
-La biblioteca no existe o no está compartida con el usuario.
+La biblioteca no existe, es del propio usuario, o ni está compartida con él ni es pública.
 
 ---
 
@@ -248,13 +254,13 @@ Devuelve el fichero como descarga (`Content-Disposition: attachment`). El nombre
 
 #### 404 Not Found
 
-La biblioteca no existe o no está compartida con el usuario.
+La biblioteca no existe, es del propio usuario, o ni está compartida con él ni es pública.
 
 ---
 
 ## DELETE /shared-libraries/:id
 
-El usuario autenticado sale de una biblioteca compartida con él. La biblioteca y sus libros no cambian, y los demás miembros conservan el acceso. Para volver a entrar, el propietario debe invitarlo de nuevo.
+El usuario autenticado sale de una biblioteca compartida con él. La biblioteca y sus libros no cambian, y los demás miembros conservan el acceso. Para volver a entrar, el propietario debe invitarlo de nuevo. Si la biblioteca es pública, la sigue viendo como cualquier otro usuario (`access` pasa a `public`).
 
 ### Respuestas
 
@@ -264,12 +270,13 @@ El usuario ya no es miembro de la biblioteca.
 
 #### 404 Not Found
 
-La biblioteca no está compartida con el usuario.
+La biblioteca no está compartida con el usuario, aunque sea pública: solo se sale de las bibliotecas de las que se es miembro.
 
 ---
 
 ## Notas de implementación
 
 - Compartir una biblioteca no copia sus libros ni crea [user books](user-books.md): lo que el usuario ve en `/user-books` no cambia.
+- En una biblioteca pública, quien no es miembro ve los libros y su propia opinión, pero nunca las valoraciones del propietario, aunque las muestre a los miembros.
 - La valoración es del libro y no de la biblioteca: si un libro del propietario está en dos bibliotecas y solo una comparte las valoraciones, se ve en esa y no en la otra.
 - Si el usuario quita un libro de todas sus bibliotecas, `own` pasa a ser `null`, pero su opinión se conserva y reaparece cuando lo añade de nuevo a una.

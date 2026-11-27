@@ -56,7 +56,11 @@ class LibrariesService {
       await this.checkTagsUsable(body.tagIds, library.entity.userId)
     }
 
-    const updatedLibrary = await librariesDao.update(id, body)
+    // The date only changes along with the visibility: making public a library that already is keeps it
+    const visibilityChanged = body.isPublic != null && body.isPublic !== library.entity.isPublic
+    const publishedAt = visibilityChanged ? { publishedAt: body.isPublic === true ? new Date() : null } : {}
+
+    const updatedLibrary = await librariesDao.update(id, { ...body, ...publishedAt })
     if (updatedLibrary == null) {
       throw new LibraryNotFoundError('library not found')
     }

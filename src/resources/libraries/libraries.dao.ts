@@ -1,7 +1,18 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBLibrary, DBSharedLibrary, LibrariesListFilter, LibraryMember, NewLibrary, SharedLibrariesListFilter, UpdateLibrary } from './libraries.interfaces.js'
+import {
+  DBLibrary,
+  DBPublicLibrary,
+  DBSharedLibrary,
+  LibrariesListFilter,
+  LibraryAccess,
+  LibraryMember,
+  NewLibrary,
+  PublicLibrariesListFilter,
+  SharedLibrariesListFilter,
+  UpdateLibrary
+} from './libraries.interfaces.js'
 import { LibraryEntity } from './libraries.entity.js'
 import { MAX_MEMBERS_PER_LIBRARY } from '../library-members/library-members.constants.js'
 import { ClientSession, Document, Filter } from 'mongodb'
@@ -41,22 +52,47 @@ function sharedLibrariesMongoFilter (filter: SharedLibrariesListFilter): Filter<
   return mongoFilter
 }
 
+/** The public libraries of other users that match the search. */
+function publicLibrariesMongoFilter (userId: string, filter: PublicLibrariesListFilter): Filter<DBLibrary> {
+  const { search, matchingOwnerIds } = filter
+  const mongoFilter: Filter<DBLibrary> = { isPublic: true, userId: { $ne: userId } }
+
+  if (search != null && search !== '') {
+    // Case-insensitive substring match: user input is escaped so it is matched literally
+    const pattern = { $regex: escapeRegExp(search), $options: 'i' }
+    mongoFilter.$or = [{ name: pattern }, { description: pattern }, { userId: { $in: [...(matchingOwnerIds ?? [])] } }]
+  }
+
+  return mongoFilter
+}
+
+/**
+ * A library as the given user sees it when they are not its owner, without the data that is private to the owner. Who
+ * sees it only because it is public gets neither the date it was shared nor the ratings, even if the members get them.
+ */
+function sharedLibraryProjection (userId: string): Document {
+  const ownMembership = { $filter: { input: '$members', cond: { $eq: ['$$this.userId', { $literal: userId }] } } }
+  const isMember = { $in: [{ $literal: userId }, '$members.userId'] }
+
+  return {
+    $project: {
+      userId: 1,
+      name: 1,
+      description: 1,
+      isPublic: 1,
+      access: { $cond: [isMember, { $literal: LibraryAccess.Member }, { $literal: LibraryAccess.Public }] },
+      shareRatings: { $and: [isMember, '$shareRatings'] },
+      booksCount: { $size: '$books' },
+      sharedAt: { $ifNull: [{ $first: { $map: { input: ownMembership, in: '$$this.createdAt' } } }, null] }
+    }
+  }
+}
+
 /** The matching libraries that are shared with the user, without the data that is private to their owner. */
 function sharedLibrariesStages (userId: string, filter: Filter<DBLibrary> = {}): Document[] {
-  const ownMembership = { $filter: { input: '$members', cond: { $eq: ['$$this.userId', { $literal: userId }] } } }
-
   return [
     { $match: { ...filter, 'members.userId': userId } },
-    {
-      $project: {
-        userId: 1,
-        name: 1,
-        description: 1,
-        shareRatings: 1,
-        booksCount: { $size: '$books' },
-        sharedAt: { $first: { $map: { input: ownMembership, in: '$$this.createdAt' } } }
-      }
-    }
+    sharedLibraryProjection(userId)
   ]
 }
 
@@ -72,6 +108,8 @@ class LibrariesDao extends Dao<DBLibrary> {
     await this.collection.createIndex({ userId: 1, tagIds: 1 })
     // The libraries shared with a user
     await this.collection.createIndex({ 'members.userId': 1 })
+    // Same order as listPublic(), only with the public libraries
+    await this.collection.createIndex({ publishedAt: -1, _id: -1 }, { partialFilterExpression: { isPublic: true } })
   }
 
   async create (newLibrary: NewLibrary, userId: string): Promise<LibraryEntity> {
@@ -85,6 +123,8 @@ class LibrariesDao extends Dao<DBLibrary> {
       shareRatings: false,
       tagIds: newLibrary.tagIds ?? [],
       members: [],
+      isPublic: false,
+      publishedAt: null,
       userId,
       createdAt: now,
       updatedAt: now
@@ -94,7 +134,7 @@ class LibrariesDao extends Dao<DBLibrary> {
     return new LibraryEntity(dbLibrary)
   }
 
-  async update (id: string, updateData: UpdateLibrary): Promise<LibraryEntity | null> {
+  async update (id: string, updateData: UpdateLibrary & Pick<Partial<DBLibrary>, 'publishedAt'>): Promise<LibraryEntity | null> {
     const now = new Date()
     const updateDoc: Partial<DBLibrary> = {
       ...updateData,
@@ -178,11 +218,13 @@ class LibrariesDao extends Dao<DBLibrary> {
     return result.modifiedCount > 0
   }
 
-  /** null if the library does not exist or the user is not a member. */
+  /** null if the library does not exist, or it is neither public nor shared with the user, or it is their own. */
   async findShared (libraryId: string, userId: string): Promise<DBSharedLibrary | null> {
-    const [shared] = await this.collection
-      .aggregate<DBSharedLibrary>(sharedLibrariesStages(userId, { _id: libraryId }))
-      .toArray()
+    const pipeline = [
+      { $match: { _id: libraryId, userId: { $ne: userId }, $or: [{ 'members.userId': userId }, { isPublic: true }] } },
+      sharedLibraryProjection(userId)
+    ]
+    const [shared] = await this.collection.aggregate<DBSharedLibrary>(pipeline).toArray()
 
     return shared ?? null
   }
@@ -217,6 +259,28 @@ class LibrariesDao extends Dao<DBLibrary> {
   /** The owners of the libraries shared with the user. */
   async findSharedOwnerIds (userId: string): Promise<readonly string[]> {
     return await this.collection.distinct('userId', { 'members.userId': userId })
+  }
+
+  /** The public libraries of other users, the most recently published first. */
+  async listPublic (userId: string, skip: number, limit: number, filter: PublicLibrariesListFilter = {}): Promise<readonly DBPublicLibrary[]> {
+    const pipeline = [
+      { $match: publicLibrariesMongoFilter(userId, filter) },
+      { $sort: { publishedAt: -1, _id: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+      { $project: { userId: 1, name: 1, description: 1, booksCount: { $size: '$books' }, publishedAt: 1 } }
+    ]
+
+    return await this.collection.aggregate<DBPublicLibrary>(pipeline).toArray()
+  }
+
+  async countPublic (userId: string, filter: PublicLibrariesListFilter = {}): Promise<number> {
+    return await this.collection.countDocuments(publicLibrariesMongoFilter(userId, filter))
+  }
+
+  /** The owners of the public libraries of other users. */
+  async findPublicOwnerIds (userId: string): Promise<readonly string[]> {
+    return await this.collection.distinct('userId', { isPublic: true, userId: { $ne: userId } })
   }
 
   async addBookIdToLibrary (libraryId: string, bookId: string, session?: ClientSession): Promise<LibraryEntity | null> {

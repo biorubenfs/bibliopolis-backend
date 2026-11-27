@@ -200,4 +200,15 @@ describe('libraries indexes', () => {
     expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
     expect(plan.executionStats.totalDocsExamined).toBe(1)
   })
+  it('should list the public libraries from an index, without sorting in memory nor reading the private ones', async () => {
+    await librariesDao.collection.updateOne({ _id: firstLibraryId }, { $set: { isPublic: true, publishedAt: new Date() } })
+
+    const plan = await librariesDao.collection
+      .find({ isPublic: true, userId: { $ne: ulid() } })
+      .sort({ publishedAt: -1, _id: -1 })
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
+    expect(plan.executionStats.totalDocsExamined).toBe(1)
+  })
 })

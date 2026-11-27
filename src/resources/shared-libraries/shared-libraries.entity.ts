@@ -1,14 +1,21 @@
 import { EntityType, Entity } from '../../entity.js'
-import { DBSharedLibrary } from '../libraries/libraries.interfaces.js'
+import { DBSharedLibrary, LibraryAccess } from '../libraries/libraries.interfaces.js'
 
-/** A library as its members see it: without the favorite mark, the tags or the id of its owner. */
+/**
+ * A library as a user who is not its owner sees it, as a member or because it is public: without the favorite mark, the
+ * tags or the id of its owner.
+ */
 export class SharedLibraryEntity extends Entity<EntityType.SharedLibraries> {
   readonly name: string
   readonly description: string | null
   readonly ownerName: string
   readonly booksCount: number
+  /** Always false for who is not a member */
   readonly shareRatings: boolean
-  readonly sharedAt: Date
+  readonly isPublic: boolean
+  readonly access: LibraryAccess
+  /** When it was shared with the user; null for who is not a member */
+  readonly sharedAt: Date | null
 
   constructor (data: DBSharedLibrary, ownerName: string) {
     super(EntityType.SharedLibraries, data._id)
@@ -17,6 +24,8 @@ export class SharedLibraryEntity extends Entity<EntityType.SharedLibraries> {
     this.ownerName = ownerName
     this.booksCount = data.booksCount
     this.shareRatings = data.shareRatings
+    this.isPublic = data.isPublic
+    this.access = data.access
     this.sharedAt = data.sharedAt
   }
 
@@ -27,6 +36,8 @@ export class SharedLibraryEntity extends Entity<EntityType.SharedLibraries> {
       ownerName: this.ownerName,
       booksCount: this.booksCount,
       shareRatings: this.shareRatings,
+      isPublic: this.isPublic,
+      access: this.access,
       sharedAt: this.sharedAt
     }
   }

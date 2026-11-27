@@ -217,6 +217,8 @@ describe('GET /shared-libraries', () => {
           ownerName: 'user01',
           booksCount: 3,
           shareRatings: false,
+          isPublic: false,
+          access: 'member',
           sharedAt: expect.any(String)
         }
       }],

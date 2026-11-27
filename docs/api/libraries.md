@@ -15,6 +15,8 @@ Atributos de una biblioteca:
 | `isFavorite`  | boolean  | Si el usuario la ha marcado como favorita      |
 | `shareRatings` | boolean | Si los miembros de la biblioteca ven las valoraciones del propietario. Sus notas no se comparten nunca |
 | `tagIds`      | string[] | IDs de sus [etiquetas](tags.md), hasta 5       |
+| `isPublic`    | boolean  | Si es pública: cualquier usuario la ve en [`/public-libraries`](public-libraries.md), sin invitación |
+| `publishedAt` | date \| null | Fecha en la que se hizo pública por última vez, o `null` si no lo es |
 | `createdAt`   | date     | Fecha de creación                              |
 | `updatedAt`   | date     | Fecha de la última modificación                |
 
@@ -40,7 +42,7 @@ Crea una nueva biblioteca para el usuario autenticado.
 
 Se eliminan los espacios al principio y al final de `name` y `description`.
 
-Una biblioteca nueva nunca es favorita ni comparte las valoraciones: `isFavorite` y `shareRatings` se ignoran si se envían y solo se cambian con [`PATCH /libraries/:id`](#patch-librariesid).
+Una biblioteca nueva nunca es favorita, ni comparte las valoraciones, ni es pública: `isFavorite`, `shareRatings` e `isPublic` se ignoran si se envían y solo se cambian con [`PATCH /libraries/:id`](#patch-librariesid).
 
 ### Respuestas
 
@@ -61,6 +63,8 @@ Biblioteca creada correctamente.
       "isFavorite": false,
       "shareRatings": false,
       "tagIds": [],
+      "isPublic": false,
+      "publishedAt": null,
       "createdAt": "2024-10-10T22:30:16.908Z",
       "updatedAt": "2024-10-10T22:30:16.908Z"
     }
@@ -138,6 +142,8 @@ Obtiene una biblioteca. Solo el propietario puede consultarla.
       "isFavorite": false,
       "shareRatings": false,
       "tagIds": [],
+      "isPublic": false,
+      "publishedAt": null,
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -206,6 +212,8 @@ Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro d
         "isFavorite": false,
         "shareRatings": false,
         "tagIds": [],
+        "isPublic": false,
+        "publishedAt": null,
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
       }
@@ -246,7 +254,7 @@ Parámetros de paginación no válidos, `ids` repetido, con más de 100 IDs o co
 
 ## PATCH /libraries/:id
 
-Modifica el nombre, la descripción, la marca de favorita, si se comparten las valoraciones o las etiquetas de una biblioteca. Solo el propietario puede modificarla.
+Modifica el nombre, la descripción, la marca de favorita, si se comparten las valoraciones, si es pública o las etiquetas de una biblioteca. Solo el propietario puede modificarla.
 
 ### Body
 
@@ -258,6 +266,7 @@ Todos los campos son opcionales; solo se modifican los que se envían.
   "description": "Nueva descripción",
   "isFavorite": true,
   "shareRatings": true,
+  "isPublic": true,
   "tagIds": ["01JZTAG0000000000000000001", "01JZTAG0000000000000000004"]
 }
 ```
@@ -268,6 +277,7 @@ Todos los campos son opcionales; solo se modifican los que se envían.
 | `description` | string \| null | No        | Descripción de la biblioteca (máx. 100 caracteres). `null` o una cadena vacía la quitan |
 | `isFavorite`  | boolean  | No        | Marca (`true`) o desmarca (`false`) la biblioteca como favorita |
 | `shareRatings` | boolean | No        | Muestra (`true`) u oculta (`false`) las valoraciones del propietario a los miembros de la biblioteca |
+| `isPublic`    | boolean  | No        | Hace pública (`true`) o privada (`false`) la biblioteca. Al hacerla pública, `publishedAt` pasa a ser la fecha actual; al hacerla privada, `null`. Enviar el valor que ya tiene no cambia `publishedAt`. Las valoraciones no se muestran nunca a quien la ve solo por ser pública |
 | `tagIds`      | string[] | No        | **Sustituye** todas las etiquetas de la biblioteca (`[]` las quita). Hasta 5, sin repetir, del propietario de la biblioteca o globales |
 
 ### Respuestas
@@ -373,6 +383,8 @@ Devuelve la biblioteca actualizada, con el ID del user book añadido a `books`.
       "isFavorite": false,
       "shareRatings": false,
       "tagIds": [],
+      "isPublic": false,
+      "publishedAt": null,
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }
@@ -633,7 +645,7 @@ La biblioteca no existe (`library not found`) o el usuario no es miembro:
 
 ## Notas de implementación
 
-- Solo el propietario puede consultar, modificar o eliminar una biblioteca en estos endpoints, añadir o quitar libros y gestionar sus miembros. Los miembros la consultan en [`/shared-libraries`](shared-libraries.md). Los administradores no tienen acceso.
+- Solo el propietario puede consultar, modificar o eliminar una biblioteca en estos endpoints, añadir o quitar libros y gestionar sus miembros. Los miembros, y cualquier usuario si es pública, la consultan en [`/shared-libraries`](shared-libraries.md). Las públicas se listan en [`/public-libraries`](public-libraries.md). Los administradores no tienen acceso.
 - Los IDs de la lista `books` corresponden a [user books](user-books.md), no a libros del catálogo.
 - Para listar los libros de una biblioteca con todos sus datos se usa [`GET /user-books?libraryId=<id>`](user-books.md#get-user-books), y para exportarlos [`GET /user-books/download`](user-books.md#get-user-booksdownload).
 - Las etiquetas de `tagIds` se gestionan en [`/tags`](tags.md). Al borrar una etiqueta, se quita de todas las bibliotecas de su propietario.

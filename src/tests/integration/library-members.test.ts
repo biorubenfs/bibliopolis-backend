@@ -192,6 +192,8 @@ describe('POST /libraries/:id/members', () => {
       shareRatings: false,
       tagIds: [],
       members: [],
+      isPublic: false,
+      publishedAt: null,
       userId: limitedId,
       createdAt: now,
       updatedAt: now
@@ -385,7 +387,8 @@ describe('privacy of the members', () => {
     const list = await request('GET', '/libraries', ownerAuth)
     for (const library of [created.body.results, updated.body.results, read.body.results, ...list.body.results]) {
       expect(Object.keys(library.attributes).sort()).toEqual([
-        'books', 'createdAt', 'description', 'isFavorite', 'name', 'shareRatings', 'tagIds', 'updatedAt', 'userId'
+        'books', 'createdAt', 'description', 'isFavorite', 'isPublic', 'name', 'publishedAt', 'shareRatings', 'tagIds', 'updatedAt',
+        'userId'
       ])
     }
   })
