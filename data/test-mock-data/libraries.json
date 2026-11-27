@@ -9,7 +9,9 @@
       "01J9W9PGE06ANTMG3Y24KGCAFF"
     ],
     "isFavorite": false,
+    "shareRatings": false,
     "tagIds": [],
+    "members": [],
     "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
     "createdAt": "2000-01-01T00:00:00.000Z",
     "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -20,7 +22,9 @@
     "description": null,
     "books": [],
     "isFavorite": false,
+    "shareRatings": false,
     "tagIds": [],
+    "members": [],
     "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
     "createdAt": "2000-01-01T00:00:00.000Z",
     "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -31,7 +35,9 @@
     "description": "description of the sample third library",
     "books": [],
     "isFavorite": false,
+    "shareRatings": false,
     "tagIds": [],
+    "members": [],
     "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
     "createdAt": "2000-01-01T00:00:00.000Z",
     "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -42,7 +48,9 @@
     "description": "description of the sample first library user02",
     "books": ["01J9XDEJZ1ZQZ71X46ESEJHQ5D", "01J9XDF6YJWYZ7EC2MDR8R58MW"],
     "isFavorite": false,
+    "shareRatings": false,
     "tagIds": [],
+    "members": [],
     "userId": "01J9XDBGCX8QM0GW67T7QGKS41",
     "createdAt": "2000-01-01T00:00:00.000Z",
     "updatedAt": "2000-01-01T00:00:00.000Z"

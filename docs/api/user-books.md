@@ -134,7 +134,7 @@ Falta `libraryId` o `format` no es `pdf` ni `csv`.
 
 #### 403 Forbidden
 
-La biblioteca pertenece a otro usuario.
+La biblioteca pertenece a otro usuario. Los miembros de una biblioteca compartida la descargan con [`GET /shared-libraries/:id/download`](shared-libraries.md#get-shared-librariesiddownload).
 
 #### 404 Not Found
 
@@ -190,6 +190,8 @@ El user book no existe o pertenece a otro usuario.
 ## PATCH /user-books/:id
 
 Modifica la valoración y las notas de un user book del usuario autenticado. Solo se pueden modificar los campos `rating` y `notes`, y ambos son obligatorios (se puede enviar `null` para borrarlos).
+
+El user book debe estar en alguna biblioteca: uno que se ha quitado de todas conserva su valoración y sus notas, pero no se puede modificar hasta que se vuelva a añadir a una.
 
 ### Body
 
@@ -274,7 +276,7 @@ Errores de validación en el body de la petición.
 
 #### 404 Not Found
 
-El user book no existe o pertenece a otro usuario.
+El user book no existe, pertenece a otro usuario o no está en ninguna biblioteca.
 
 ```json
 {

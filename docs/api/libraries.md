@@ -13,6 +13,7 @@ Atributos de una biblioteca:
 | `userId`      | string   | ID del usuario propietario                     |
 | `books`       | string[] | IDs de los user books que contiene             |
 | `isFavorite`  | boolean  | Si el usuario la ha marcado como favorita      |
+| `shareRatings` | boolean | Si los miembros de la biblioteca ven las valoraciones del propietario. Sus notas no se comparten nunca |
 | `tagIds`      | string[] | IDs de sus [etiquetas](tags.md), hasta 5       |
 | `createdAt`   | date     | Fecha de creación                              |
 | `updatedAt`   | date     | Fecha de la última modificación                |
@@ -39,7 +40,7 @@ Crea una nueva biblioteca para el usuario autenticado.
 
 Se eliminan los espacios al principio y al final de `name` y `description`.
 
-Una biblioteca nueva nunca es favorita: `isFavorite` se ignora si se envía y solo se cambia con [`PATCH /libraries/:id`](#patch-librariesid).
+Una biblioteca nueva nunca es favorita ni comparte las valoraciones: `isFavorite` y `shareRatings` se ignoran si se envían y solo se cambian con [`PATCH /libraries/:id`](#patch-librariesid).
 
 ### Respuestas
 
@@ -58,6 +59,7 @@ Biblioteca creada correctamente.
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": [],
       "isFavorite": false,
+      "shareRatings": false,
       "tagIds": [],
       "createdAt": "2024-10-10T22:30:16.908Z",
       "updatedAt": "2024-10-10T22:30:16.908Z"
@@ -134,6 +136,7 @@ Obtiene una biblioteca. Solo el propietario puede consultarla.
         "01J9WA3W9TE5NG1H21PTK9VS4Q"
       ],
       "isFavorite": false,
+      "shareRatings": false,
       "tagIds": [],
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -201,6 +204,7 @@ Lista las bibliotecas del usuario autenticado: primero las favoritas y, dentro d
           "01J9WA3W9TE5NG1H21PTK9VS4Q"
         ],
         "isFavorite": false,
+        "shareRatings": false,
         "tagIds": [],
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -242,7 +246,7 @@ Parámetros de paginación no válidos, `ids` repetido, con más de 100 IDs o co
 
 ## PATCH /libraries/:id
 
-Modifica el nombre, la descripción, la marca de favorita o las etiquetas de una biblioteca. Solo el propietario puede modificarla.
+Modifica el nombre, la descripción, la marca de favorita, si se comparten las valoraciones o las etiquetas de una biblioteca. Solo el propietario puede modificarla.
 
 ### Body
 
@@ -253,6 +257,7 @@ Todos los campos son opcionales; solo se modifican los que se envían.
   "name": "Nuevo nombre",
   "description": "Nueva descripción",
   "isFavorite": true,
+  "shareRatings": true,
   "tagIds": ["01JZTAG0000000000000000001", "01JZTAG0000000000000000004"]
 }
 ```
@@ -262,6 +267,7 @@ Todos los campos son opcionales; solo se modifican los que se envían.
 | `name`        | string   | No        | Nombre de la biblioteca (entre 3 y 50 caracteres)  |
 | `description` | string \| null | No        | Descripción de la biblioteca (máx. 100 caracteres). `null` o una cadena vacía la quitan |
 | `isFavorite`  | boolean  | No        | Marca (`true`) o desmarca (`false`) la biblioteca como favorita |
+| `shareRatings` | boolean | No        | Muestra (`true`) u oculta (`false`) las valoraciones del propietario a los miembros de la biblioteca |
 | `tagIds`      | string[] | No        | **Sustituye** todas las etiquetas de la biblioteca (`[]` las quita). Hasta 5, sin repetir, del propietario de la biblioteca o globales |
 
 ### Respuestas
@@ -294,7 +300,7 @@ Elimina una biblioteca. Solo el propietario puede eliminarla.
 
 Los user books de la biblioteca **no se eliminan**: solo se quita la biblioteca de su lista `libraries`.
 
-Sus [importaciones](imports.md) y los informes de estas **sí se eliminan**.
+Sus [importaciones](imports.md) y los informes de estas **sí se eliminan**, y sus miembros pierden el acceso.
 
 ### Respuestas
 
@@ -365,6 +371,7 @@ Devuelve la biblioteca actualizada, con el ID del user book añadido a `books`.
       "userId": "01J9BHWZ8N4B1JBSAFCBKQGERS",
       "books": ["01J9W9P6M5S0VRKVSRX3Q9T3W7"],
       "isFavorite": false,
+      "shareRatings": false,
       "tagIds": [],
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
@@ -442,9 +449,191 @@ La biblioteca no existe o el user book no está en ella.
 
 ---
 
+## GET /libraries/:id/members
+
+Lista los miembros de una biblioteca: los usuarios que pueden verla en [`/shared-libraries`](shared-libraries.md). Del invitado más recientemente al más antiguo. Admite [paginación](../index.md#paginacion). Solo el propietario, que no cuenta como miembro, puede consultarlos.
+
+Atributos de un miembro (su `id` es el del usuario):
+
+| Campo       | Tipo   | Descripción                          |
+| ----------- | ------ | ------------------------------------ |
+| `userId`    | string | ID del usuario                       |
+| `name`      | string | Nombre del usuario                   |
+| `email`     | string | Email del usuario                    |
+| `createdAt` | date   | Fecha en la que se le dio acceso     |
+
+### Respuestas
+
+#### 200 OK
+
+```json
+{
+  "results": [
+    {
+      "type": "library-members",
+      "id": "01J9XDBGCX8QM0GW67T7QGKS41",
+      "attributes": {
+        "userId": "01J9XDBGCX8QM0GW67T7QGKS41",
+        "name": "user02",
+        "email": "user02@email.com",
+        "createdAt": "2000-01-01T00:00:00.000Z"
+      }
+    }
+  ],
+  "paginationInfo": {
+    "skip": 0,
+    "limit": 10,
+    "total": 1
+  }
+}
+```
+
+#### 400 Bad Request
+
+Parámetros de paginación no válidos.
+
+#### 403 Forbidden
+
+La biblioteca pertenece a otro usuario.
+
+#### 404 Not Found
+
+La biblioteca no existe.
+
+---
+
+## POST /libraries/:id/members
+
+Da acceso de solo lectura a un usuario, hasta un máximo de 20 por biblioteca. El acceso es inmediato: el usuario no tiene que aceptarlo, y puede salir con [`DELETE /shared-libraries/:id`](shared-libraries.md#delete-shared-librariesid). Solo el propietario puede invitar.
+
+### Body
+
+```json
+{
+  "email": "user02@email.com"
+}
+```
+
+| Campo   | Tipo   | Requerido | Descripción                                                                  |
+| ------- | ------ | --------- | ---------------------------------------------------------------------------- |
+| `email` | string | Sí        | Email exacto de la cuenta del usuario. No distingue mayúsculas y minúsculas, y se eliminan los espacios al principio y al final |
+
+### Respuestas
+
+#### 201 Created
+
+Devuelve el nuevo miembro.
+
+```json
+{
+  "results": {
+    "type": "library-members",
+    "id": "01J9XDBGCX8QM0GW67T7QGKS41",
+    "attributes": {
+      "userId": "01J9XDBGCX8QM0GW67T7QGKS41",
+      "name": "user02",
+      "email": "user02@email.com",
+      "createdAt": "2000-01-01T00:00:00.000Z"
+    }
+  }
+}
+```
+
+#### 400 Bad Request
+
+Body no válido, o el email es el del propietario:
+
+```json
+{
+  "statusCode": 400,
+  "errorCode": "VALIDATION ERROR",
+  "message": "the owner cannot be a member of the library"
+}
+```
+
+#### 403 Forbidden
+
+La biblioteca pertenece a otro usuario.
+
+#### 404 Not Found
+
+La biblioteca no existe (`library not found`), o no hay ningún usuario `regular` con ese email. La respuesta es la misma si el email es de un administrador:
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "user not found"
+}
+```
+
+#### 409 Conflict
+
+El usuario ya es miembro de la biblioteca:
+
+```json
+{
+  "statusCode": 409,
+  "errorCode": "CONFLICT ERROR",
+  "message": "user is already a member of the library"
+}
+```
+
+La biblioteca ya tiene el máximo de miembros:
+
+```json
+{
+  "statusCode": 409,
+  "errorCode": "LIBRARY MEMBERS LIMIT REACHED",
+  "message": "a library cannot have more than 20 members"
+}
+```
+
+#### 429 Too Many Requests
+
+Más de 20 invitaciones fallidas del mismo usuario, sea cual sea el error, en 15 minutos. Las invitaciones correctas no cuentan.
+
+```json
+{
+  "statusCode": 429,
+  "errorCode": "TOO MANY REQUESTS ERROR",
+  "message": "Too many failed invitations, please try again later"
+}
+```
+
+---
+
+## DELETE /libraries/:id/members/:userId
+
+Retira el acceso a un miembro, con efecto inmediato. Solo el propietario puede retirarlo.
+
+### Respuestas
+
+#### 204 No Content
+
+El usuario ya no es miembro de la biblioteca.
+
+#### 403 Forbidden
+
+La biblioteca pertenece a otro usuario.
+
+#### 404 Not Found
+
+La biblioteca no existe (`library not found`) o el usuario no es miembro:
+
+```json
+{
+  "statusCode": 404,
+  "errorCode": "NOT FOUND ERROR",
+  "message": "member not found"
+}
+```
+
+---
+
 ## Notas de implementación
 
-- Solo el propietario puede consultar, modificar o eliminar una biblioteca, y añadir o quitar libros. Los administradores no tienen acceso.
+- Solo el propietario puede consultar, modificar o eliminar una biblioteca en estos endpoints, añadir o quitar libros y gestionar sus miembros. Los miembros la consultan en [`/shared-libraries`](shared-libraries.md). Los administradores no tienen acceso.
 - Los IDs de la lista `books` corresponden a [user books](user-books.md), no a libros del catálogo.
 - Para listar los libros de una biblioteca con todos sus datos se usa [`GET /user-books?libraryId=<id>`](user-books.md#get-user-books), y para exportarlos [`GET /user-books/download`](user-books.md#get-user-booksdownload).
 - Las etiquetas de `tagIds` se gestionan en [`/tags`](tags.md). Al borrar una etiqueta, se quita de todas las bibliotecas de su propietario.

@@ -18,5 +18,6 @@ export enum ApiRestErrorCode {
   ImportFileTooLarge = 'IMPORT FILE TOO LARGE',
   ImportAlreadyActive = 'IMPORT ALREADY ACTIVE',
   TagLimitReached = 'TAG LIMIT REACHED',
+  LibraryMembersLimitReached = 'LIBRARY MEMBERS LIMIT REACHED',
   CoverNotAvailable = 'COVER NOT AVAILABLE'
 }

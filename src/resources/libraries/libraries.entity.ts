@@ -1,5 +1,5 @@
 import { EntityType, Entity } from '../../entity.js'
-import { DBLibrary } from './libraries.interfaces.js'
+import { DBLibrary, LibraryMember } from './libraries.interfaces.js'
 
 export class LibraryEntity extends Entity<EntityType.Libraries> {
   readonly name: string
@@ -7,7 +7,11 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
   readonly userId: string
   readonly books: string[]
   readonly isFavorite: boolean
+  /** Whether the members of the library see the ratings of the owner. The notes are never shared */
+  readonly shareRatings: boolean
   readonly tagIds: string[]
+  /** The users who can see the library, oldest first. Private: only its own endpoints expose them */
+  readonly members: readonly LibraryMember[]
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -18,7 +22,9 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
     this.userId = data.userId
     this.books = data.books
     this.isFavorite = data.isFavorite
+    this.shareRatings = data.shareRatings
     this.tagIds = data.tagIds
+    this.members = data.members
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
   }
@@ -30,6 +36,7 @@ export class LibraryEntity extends Entity<EntityType.Libraries> {
       userId: this.userId,
       books: this.books,
       isFavorite: this.isFavorite,
+      shareRatings: this.shareRatings,
       tagIds: this.tagIds,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt

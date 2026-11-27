@@ -8,7 +8,7 @@ import { DownloadFormat, UpdateUserBook } from './user-books.interfaces.js'
 import userBooksDao from './user-books.dao.js'
 import { UserBookEntity } from './user-books.entity.js'
 import { UserBookPermissionsError, UserBookNotFoundError } from './user-books.error.js'
-import { createLibraryBooksPDFStream } from '../../utils/pdf-creator.utils.js'
+import { createLibraryBooksPDFStream, PDFLibraryHeader } from '../../utils/pdf-creator.utils.js'
 import { createLibraryBooksCSVStream } from '../../utils/csv-creator.utils.js'
 
 class UserBooksService {
@@ -58,18 +58,23 @@ class UserBooksService {
 
   async download (libraryId: string, userId: string, format: DownloadFormat = DownloadFormat.PDF): Promise<StreamResultObject> {
     const library = await librariesService.get(libraryId, userId)
+    return await this.exportLibrary(library.entity, format)
+  }
 
-    const booksCursor = await userBooksDao.listCursor({ userId, librariesIds: [libraryId] })
+  /** Exports the books of a library, without checking the access: the callers do it for the owner or for a member */
+  async exportLibrary (library: PDFLibraryHeader & { id: string, userId: string }, format: DownloadFormat = DownloadFormat.PDF): Promise<StreamResultObject> {
+    const filter = { userId: library.userId, librariesIds: [library.id] }
+    const booksCursor = await userBooksDao.listCursor(filter)
 
-    const safeName = library.entity.name.replace(/[^a-z0-9_-]/gi, '_')
+    const safeName = library.name.replace(/[^a-z0-9_-]/gi, '_')
 
     if (format === DownloadFormat.CSV) {
       const stream = await createLibraryBooksCSVStream(booksCursor)
       return new StreamResultObject(stream, 'text/csv; charset=utf-8', `${safeName}.csv`)
     }
 
-    const total = await userBooksDao.count({ userId, librariesIds: [libraryId] })
-    const stream = await createLibraryBooksPDFStream(library.entity, booksCursor, total)
+    const total = await userBooksDao.count(filter)
+    const stream = await createLibraryBooksPDFStream(library, booksCursor, total)
     return new StreamResultObject(stream, 'application/pdf', `${safeName}.pdf`)
   }
 }

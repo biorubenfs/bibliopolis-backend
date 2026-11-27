@@ -9,6 +9,7 @@ import mongo from '../../mongo.js'
 import { ApiRestErrorCode } from '../../error/types.js'
 import booksDao from '../../resources/books/books.dao.js'
 import booksService from '../../resources/books/books.service.js'
+import librariesDao from '../../resources/libraries/libraries.dao.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
 import { BooksSource } from '../../resources/sources/sources.types.js'
 import { DBUserBook } from '../../resources/user-books/user-books.interfaces.js'
@@ -46,6 +47,7 @@ beforeAll(async () => {
   await loadDataInDb(DataSetType.Test, MockDataSet.Books, MockDataSet.Users, MockDataSet.Libraries, MockDataSet.UserBooks)
   await booksDao.init()
   await userBooksDao.init()
+  await librariesDao.init()
 })
 
 afterAll(async () => {
@@ -146,5 +148,29 @@ describe('user books indexes', () => {
 
     await expect(userBooksDao.collection.insertOne({ ...userBook, _id: ulid() } as unknown as DBUserBook))
       .rejects.toSatisfy((error: unknown) => error instanceof MongoServerError && error.code === 11000)
+  })
+})
+
+describe('opinions of a user on the books of a shared library', () => {
+  it('should be found by the unique index, without reading other books of the user', async () => {
+    const bookIds = ['01J9KKFS6CKTSVY0ETH9A7PHXW', '01J9KKFTWAKVR1HGHCER50JJMQ', ulid()]
+    const plan = await userBooksDao.collection
+      .find({ userId: user01Id, 'libraries.0': { $exists: true }, bookId: { $in: bookIds } })
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
+    expect(plan.executionStats.totalDocsExamined).toBe(2)
+  })
+})
+
+describe('libraries indexes', () => {
+  it('should find the libraries shared with a user by index', async () => {
+    const userId = ulid()
+    await librariesDao.addMember(firstLibraryId, userId)
+
+    const plan = await librariesDao.collection.find({ 'members.userId': userId }).explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH'])
+    expect(plan.executionStats.totalDocsExamined).toBe(1)
   })
 })

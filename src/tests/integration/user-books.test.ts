@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import testUtils from '../utils/utils.js'
 import { DataSetType, loadDataInDb, MockDataSet } from '../../load-data.js'
 import mongo from '../../mongo.js'
+import { ApiRestErrorCode } from '../../error/types.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
 
 // Fixture data: user01 has Rossiya, Lightning and Ashes and It Never Happened in the first library.
@@ -78,6 +79,15 @@ async function listUserBooks (params: Record<string, string | string[]>): Promis
     }
   }
   const response = await fetch(url, { headers: { Authorization: authHeader } })
+  return { status: response.status, body: await response.json() }
+}
+
+async function patchUserBook (id: string, body: object): Promise<{ status: number, body: any }> {
+  const response = await fetch(new URL(`/user-books/${id}`, testUtils.TESTS_BASE_URL), {
+    method: 'PATCH',
+    headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
   return { status: response.status, body: await response.json() }
 }
 
@@ -229,5 +239,32 @@ describe('GET /user-books?search', () => {
 
     expect(status).toBe(400)
     expect(body.validationError[0].path).toEqual(['search'])
+  })
+})
+
+describe('PATCH /user-books/:id', () => {
+  it('should reject an opinion on a book that is not in any library', async () => {
+    const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'not mine anymore' })
+
+    expect(status).toBe(404)
+    expect(body.errorCode).toBe(ApiRestErrorCode.NotFoundError)
+    expect(body.message).toBe('user book not found')
+    const stored = await userBooksDao.collection.findOne({ _id: removedId })
+    expect(stored?.rating).toBeNull()
+    expect(stored?.notes).toBeNull()
+  })
+
+  it('should accept the opinion again once the book is back in a library', async () => {
+    await userBooksDao.collection.updateOne({ _id: removedId }, { $set: { libraries: [secondLibraryId] } })
+
+    try {
+      const { status, body } = await patchUserBook(removedId, { rating: 8, notes: 'mine again' })
+
+      expect(status).toBe(200)
+      expect(body.results.attributes.rating).toBe(8)
+      expect(body.results.attributes.notes).toBe('mine again')
+    } finally {
+      await userBooksDao.collection.updateOne({ _id: removedId }, { $set: { libraries: [] } })
+    }
   })
 })

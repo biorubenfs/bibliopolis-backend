@@ -272,4 +272,21 @@ describe('users tests', async () => {
 
     expect(response.status).equals(200)
   })
+
+  it.each([[''], ['   ']])('PATCH /users/me - should reject the name "%s"', async (name) => {
+    const before = await usersDao.findById('01J9BHWZ8N4B1JBSAFCBKQGERS')
+
+    const response = await fetch(new URL('/users/me', usersURL), {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: authHeader
+      },
+      method: 'PATCH',
+      body: JSON.stringify({ name })
+    })
+
+    expect(response.status).equals(400)
+    expect(await response.json()).to.have.property('errorCode').equals(ApiRestErrorCode.ValidationError)
+    expect(await usersDao.findById('01J9BHWZ8N4B1JBSAFCBKQGERS')).toEqual(before)
+  })
 })

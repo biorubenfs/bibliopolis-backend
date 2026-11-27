@@ -1,12 +1,13 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBUserBook, UpdateUserBook } from './user-books.interfaces.js'
+import { DBUserBook, SharedUserBook, UpdateUserBook, UserBookOpinion } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
 import { AggregationCursor, ClientSession, Filter, WithId } from 'mongodb'
 import { BookEntity } from '../books/books.entity.js'
 import { BookSyncData } from '../books/books.interfaces.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
+import { Page } from '../../types.js'
 
 function dbUserBookToEntity (dbUserBook: DBUserBook | null): UserBookEntity | null {
   return dbUserBook == null ? null : new UserBookEntity(dbUserBook)
@@ -156,6 +157,39 @@ class UserBooksDao extends Dao<DBUserBook> {
     return dbUserBooks.map(dbUserBookToEntity).filter(isNotNull)
   }
 
+  /**
+   * The books of the owner of a shared library, for its members. The private data never leaves the database:
+   * neither the notes nor, unless the owner shares them, the ratings are read.
+   */
+  async listShared (ownerId: string, libraryId: string, search: string | undefined, withRatings: boolean, page: Page): Promise<readonly SharedUserBook[]> {
+    const projection = {
+      _id: 0,
+      bookId: 1,
+      bookTitle: 1,
+      bookAuthors: 1,
+      bookCover: 1,
+      bookIsbn13: 1,
+      bookIsbn10: 1,
+      ...(withRatings ? { rating: 1 } : {})
+    }
+
+    return await this.collection
+      .find(buildMongoFilter({ userId: ownerId, librariesIds: [libraryId], search }))
+      .project<SharedUserBook>(projection)
+      .sort({ _id: -1 })
+      .skip(page.skip)
+      .limit(page.limit)
+      .toArray()
+  }
+
+  /** The opinions of the user on the given books, only on those that are in some of their own libraries. */
+  async findOpinions (userId: string, bookIds: readonly string[]): Promise<readonly UserBookOpinion[]> {
+    return await this.collection
+      .find({ ...buildMongoFilter({ userId, inAnyLibrary: true }), bookId: { $in: [...bookIds] } })
+      .project<UserBookOpinion>({ _id: 0, bookId: 1, rating: 1, notes: 1 })
+      .toArray()
+  }
+
   async listCursor (filters: Omit<UserBooksFilter, 'search'>): Promise<AggregationCursor<WithId<DBUserBook>>> {
     return this.collection.aggregate<WithId<DBUserBook>>([{ $match: buildMongoFilter(filters) }])
   }
@@ -181,9 +215,10 @@ class UserBooksDao extends Dao<DBUserBook> {
     await this.collection.updateMany({ libraries: libraryId, userId }, { $pull: { libraries: libraryId } }, { session })
   }
 
+  /** Only a book that is in some library can be rated: one removed from all of them keeps its data untouched. */
   async update (id: string, userId: string, data: UpdateUserBook): Promise<UserBookEntity | null> {
     const upd = await this.collection.findOneAndUpdate(
-      { _id: id, userId },
+      { _id: id, userId, 'libraries.0': { $exists: true } },
       {
         $set: { ...data }
       },

@@ -374,7 +374,9 @@ describe('libraries CRUD basic tests', async () => {
       description: 'library whose deletion fails',
       books: [userBookId],
       isFavorite: false,
+      shareRatings: false,
       tagIds: [],
+      members: [],
       userId,
       createdAt: now,
       updatedAt: now
@@ -434,7 +436,9 @@ describe('libraries CRUD basic tests', async () => {
       description: 'library of another user',
       books: [ownerUserBookId],
       isFavorite: false,
+      shareRatings: false,
       tagIds: [],
+      members: [],
       userId: ownerId,
       createdAt: now,
       updatedAt: now
@@ -645,7 +649,9 @@ describe('libraries books management tests', async () => {
       description: null,
       books: [userBookId],
       isFavorite: false,
+      shareRatings: false,
       tagIds: [],
+      members: [],
       userId,
       createdAt: now,
       updatedAt: now
