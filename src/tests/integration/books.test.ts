@@ -4,6 +4,7 @@ import { DataSetType, loadDataInDb, MockDataSet } from '../../load-data.js'
 import { makeJwt } from '../../resources/auth/auth.utils.js'
 import { Role } from '../../resources/users/users.interfaces.js'
 import mongo from '../../mongo.js'
+import booksDao from '../../resources/books/books.dao.js'
 import { ApiRestErrorCode } from '../../error/types.js'
 
 const baseUrl = new URL(testUtils.TESTS_BASE_URL)
@@ -68,5 +69,60 @@ describe('books tests', async () => {
     // Newest first by id: the second newest book of the test data
     const firstBook = body.results.at(0).attributes
     expect(firstBook).to.have.property('title').equals('Eyewitness to History')
+  })
+})
+
+describe('GET /books?hasCover=', () => {
+  // The newest book of the test data; the others have a cover
+  const NEWEST_BOOK_ID = '01J9KKG5ZN2MMPHV4M3E5JR98V'
+  const SECOND_NEWEST_BOOK_ID = '01J9KKG3X20MDEXAMYSSQZJ21Y'
+  let originalCover: unknown
+
+  beforeAll(async () => {
+    const book = await booksDao.collection.findOne({ _id: NEWEST_BOOK_ID })
+    originalCover = book?.cover
+    await booksDao.collection.updateOne({ _id: NEWEST_BOOK_ID }, { $set: { cover: { source: null, value: null } } })
+  })
+
+  afterAll(async () => {
+    await booksDao.collection.updateOne({ _id: NEWEST_BOOK_ID }, { $set: { cover: originalCover as any } })
+  })
+
+  async function list (query: string): Promise<{ status: number, body: any }> {
+    const response = await fetch(new URL(`/books?${query}`, baseUrl), { headers: { Authorization: authHeader } })
+    return { status: response.status, body: await response.json() }
+  }
+
+  it('should list only the books with a cover, newest first', async () => {
+    const { status, body } = await list('hasCover=true&limit=1')
+
+    expect(status).toBe(200)
+    expect(body.results.map((book: any) => book.id)).toEqual([SECOND_NEWEST_BOOK_ID])
+    expect(body.paginationInfo.total).toBe(11)
+  })
+
+  it('should list only the books without a cover', async () => {
+    const { status, body } = await list('hasCover=false')
+
+    expect(status).toBe(200)
+    expect(body.results.map((book: any) => book.id)).toEqual([NEWEST_BOOK_ID])
+    expect(body.paginationInfo.total).toBe(1)
+  })
+
+  it('should combine with the search', async () => {
+    const newest = await booksDao.collection.findOne({ _id: NEWEST_BOOK_ID })
+
+    const withCover = await list(`hasCover=true&search=${encodeURIComponent(newest?.title ?? '')}`)
+    const withoutCover = await list(`hasCover=false&search=${encodeURIComponent(newest?.title ?? '')}`)
+
+    expect(withCover.body.results.map((book: any) => book.id)).not.toContain(NEWEST_BOOK_ID)
+    expect(withoutCover.body.results.map((book: any) => book.id)).toEqual([NEWEST_BOOK_ID])
+  })
+
+  it('should reject a value that is not a boolean', async () => {
+    const { status, body } = await list('hasCover=yes')
+
+    expect(status).toBe(400)
+    expect(body.errorCode).toBe(ApiRestErrorCode.ValidationError)
   })
 })
