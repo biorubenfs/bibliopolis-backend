@@ -17,6 +17,12 @@ export enum UserBookRating {
   TEN,
 }
 
+export enum ReadingStatus {
+  TO_READ = 'to_read',
+  READING = 'reading',
+  READ = 'read',
+}
+
 export enum DownloadFormat {
   PDF = 'pdf',
   CSV = 'csv',

@@ -1,7 +1,7 @@
 import { EntityType, Entity } from '../../entity.js'
 import { BookCover } from '../../types.js'
 import { getCoverUrl } from '../../utils.js'
-import { DBUserBook, UserBookRating } from './user-books.interfaces.js'
+import { DBUserBook, ReadingStatus, UserBookRating } from './user-books.interfaces.js'
 
 export class UserBookEntity extends Entity<EntityType.UserBooks> {
   readonly libraries: readonly string[]
@@ -14,6 +14,9 @@ export class UserBookEntity extends Entity<EntityType.UserBooks> {
   readonly bookIsbn10: string | null
   readonly rating: null | UserBookRating
   readonly notes: null | string
+  readonly readingStatus: null | ReadingStatus
+  /** The day the book was finished, at 00:00 UTC. Only a read book may have it, and it may not */
+  readonly finishedAt: null | Date
   readonly userId: string
   readonly createdAt: Date
   readonly updatedAt: Date
@@ -29,6 +32,8 @@ export class UserBookEntity extends Entity<EntityType.UserBooks> {
     this.bookIsbn10 = data.bookIsbn10
     this.rating = data.rating
     this.notes = data.notes
+    this.readingStatus = data.readingStatus
+    this.finishedAt = data.finishedAt
     this.userId = data.userId
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
@@ -45,6 +50,9 @@ export class UserBookEntity extends Entity<EntityType.UserBooks> {
       bookIsbn10: this.bookIsbn10,
       rating: this.rating,
       notes: this.notes,
+      readingStatus: this.readingStatus,
+      // A day, without time: YYYY-MM-DD
+      finishedAt: this.finishedAt?.toISOString().slice(0, 10) ?? null,
       userId: this.userId,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt

@@ -62,7 +62,9 @@ async function insertDataInDb<T extends Document> (filename: string, collection:
   const parsedData: any[] = data.map(item => ({
     ...item,
     createdAt: new Date(item.createdAt),
-    updatedAt: new Date(item.updatedAt)
+    updatedAt: new Date(item.updatedAt),
+    // Only user books have it, and it may be null
+    ...(typeof item.finishedAt === 'string' ? { finishedAt: new Date(item.finishedAt) } : {})
   }))
 
   await collection.insertMany(parsedData)

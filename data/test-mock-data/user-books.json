@@ -10,6 +10,8 @@
     "bookIsbn10": "059538529X",
     "notes": null,
     "rating": null,
+    "readingStatus": null,
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": null
@@ -28,6 +30,8 @@
     "bookIsbn10": "0974326453",
     "notes": null,
     "rating": null,
+    "readingStatus": null,
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": null
@@ -46,6 +50,8 @@
     "bookIsbn10": "1732539413",
     "notes": null,
     "rating": null,
+    "readingStatus": null,
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": null
@@ -64,6 +70,8 @@
     "bookIsbn10": "0399588825",
     "notes": null,
     "rating": null,
+    "readingStatus": null,
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": null
@@ -82,6 +90,8 @@
     "bookIsbn10": "1732539413",
     "notes": null,
     "rating": null,
+    "readingStatus": null,
+    "finishedAt": null,
     "bookCover": {
       "source": "open_library",
       "value": null

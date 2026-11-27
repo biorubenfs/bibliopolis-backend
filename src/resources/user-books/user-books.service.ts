@@ -5,14 +5,14 @@ import librariesService from '../libraries/libraries.service.js'
 import librariesDao from '../libraries/libraries.dao.js'
 
 import { DownloadFormat, UpdateUserBook } from './user-books.interfaces.js'
-import userBooksDao from './user-books.dao.js'
+import userBooksDao, { UserBooksFilter } from './user-books.dao.js'
 import { UserBookEntity } from './user-books.entity.js'
 import { UserBookPermissionsError, UserBookNotFoundError } from './user-books.error.js'
 import { createLibraryBooksPDFStream, PDFLibraryHeader } from '../../utils/pdf-creator.utils.js'
 import { createLibraryBooksCSVStream } from '../../utils/csv-creator.utils.js'
 
 class UserBooksService {
-  async list (page: Page, userId: string, filter: { userId?: string, librariesIds?: readonly string[], search?: string }): Promise<CollectionResultObject<UserBookEntity>> {
+  async list (page: Page, userId: string, filter: Omit<UserBooksFilter, 'inAnyLibrary'>): Promise<CollectionResultObject<UserBookEntity>> {
     if (filter.userId != null && filter.userId !== userId) {
       throw new UserBookPermissionsError('user can only list this own books')
     }

@@ -1,6 +1,11 @@
 import { z } from 'zod'
 import { paginationQuerySchema } from '../../pagination.schema.js'
-import { UserBookRating, DownloadFormat } from './user-books.interfaces.js'
+import { UserBookRating, DownloadFormat, ReadingStatus } from './user-books.interfaces.js'
+
+/** Today in UTC plus one day, as YYYY-MM-DD: a day that is already today somewhere ahead of UTC is not in the future. */
+function latestAllowedDay (): string {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
 
 export const userBookUpdateSchema = z.object({
   // rating: z.union([
@@ -8,14 +13,39 @@ export const userBookUpdateSchema = z.object({
   //   z.literal(6), z.literal(7), z.literal(8), z.literal(9), z.literal(10),
   // ]).nullable(),
   rating: z.nativeEnum(UserBookRating).nullable(),
-  notes: z.string().trim().max(150).nullable()
-})
+  notes: z.string().trim().max(150).nullable(),
+  readingStatus: z.nativeEnum(ReadingStatus).nullable(),
+  // A day, without time. YYYY-MM-DD strings sort as dates
+  finishedAt: z.string().date().nullable()
+}).superRefine((data, ctx) => {
+  if (data.finishedAt == null) return
+  if (data.readingStatus !== ReadingStatus.READ) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['finishedAt'], message: 'only a read book can have a finish date' })
+  }
+  if (data.finishedAt > latestAllowedDay()) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['finishedAt'], message: 'the finish date cannot be in the future' })
+  }
+}).transform((data) => ({
+  ...data,
+  // Stored at 00:00 UTC, so the day does not change with the time zone
+  finishedAt: data.finishedAt == null ? null : new Date(`${data.finishedAt}T00:00:00.000Z`)
+}))
+
+/** In the query, the books without a reading status: null cannot be sent as a query param. */
+export const WITHOUT_READING_STATUS = 'none'
 
 export const userBooksQuerySchema = paginationQuerySchema.extend({
   userId: z.string().optional(),
   libraryId: z.union([z.string(), z.array(z.string())]).optional(),
-  search: z.string().trim().max(100).optional()
-})
+  search: z.string().trim().max(100).optional(),
+  readingStatus: z.union([z.nativeEnum(ReadingStatus), z.literal(WITHOUT_READING_STATUS)])
+    .transform(value => value === WITHOUT_READING_STATUS ? null : value)
+    .optional(),
+  readYear: z.string().regex(/^\d{4}$/, 'readYear must be a year of four digits').transform(Number).optional()
+}).refine(
+  query => query.readYear == null || query.readingStatus === ReadingStatus.READ,
+  { path: ['readYear'], message: 'readYear requires readingStatus=read' }
+)
 
 export const userBooksDownloadQuerySchema = z.object({
   libraryId: z.string(),

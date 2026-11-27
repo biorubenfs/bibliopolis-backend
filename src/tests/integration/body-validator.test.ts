@@ -101,7 +101,7 @@ describe('fields outside the schema are not stored', () => {
   })
 
   it('PATCH /user-books/:id - should not allow changing the owner', async () => {
-    const response = await request('PATCH', `/user-books/${userBookId}`, { rating: 5, notes: 'notes', userId: 'someone-else' })
+    const response = await request('PATCH', `/user-books/${userBookId}`, { rating: 5, notes: 'notes', readingStatus: null, finishedAt: null, userId: 'someone-else' })
     expect(response.status).toBe(200)
 
     const userBook = await userBooksDao.collection.findOne({ _id: userBookId })

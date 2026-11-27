@@ -548,6 +548,59 @@ describe('libraries books management tests', async () => {
     expect(counterBeforeAddingBook + 1).equals(counterAfterAddingBook)
   })
 
+  it('POST /libraries/:id/books - should store the creation and update dates of a new user book', async () => {
+    const before = new Date()
+    const url = new URL(`/libraries/${thirdLibraryId}/books`, librariesUrl)
+    const response = await fetch(url, {
+      headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'The Histories',
+        authors: ['Herodotus'],
+        cover: { source: 'open_library', value: null },
+        isbn13: '9780140449082',
+        isbn10: '0140449086'
+      })
+    })
+
+    expect(response.status).equals(201)
+    const stored = await userBooksDao.collection.findOne({ userId, bookIsbn13: '9780140449082' })
+    expect(stored?.createdAt).toBeInstanceOf(Date)
+    expect(stored?.createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime())
+    expect(stored?.updatedAt).toEqual(stored?.createdAt)
+    expect(stored?.readingStatus).toBeNull()
+    expect(stored?.finishedAt).toBeNull()
+  })
+
+  it('POST /libraries/:id/books - should keep the creation date of a user book added to another library', async () => {
+    const created = new Date('2001-01-01T00:00:00.000Z')
+    await userBooksDao.collection.updateOne({ userId, bookIsbn13: '9780140449082' }, { $set: { createdAt: created, updatedAt: created } })
+
+    const url = new URL(`/libraries/${firstLibraryId}/books`, librariesUrl)
+    const response = await fetch(url, {
+      headers: { Authorization: authHeader, 'Content-Type': 'application/json' },
+      method: 'POST',
+      body: JSON.stringify({
+        title: 'The Histories',
+        authors: ['Herodotus'],
+        cover: { source: 'open_library', value: null },
+        isbn13: '9780140449082',
+        isbn10: '0140449086'
+      })
+    })
+
+    const stored = await userBooksDao.collection.findOne({ userId, bookIsbn13: '9780140449082' })
+    // Leave the first library as the later tests expect it
+    if (stored != null) {
+      await userBooksDao.collection.updateOne({ _id: stored._id }, { $pull: { libraries: firstLibraryId } })
+      await librariesDao.collection.updateOne({ _id: firstLibraryId }, { $pull: { books: stored._id } })
+    }
+
+    expect(response.status).equals(201)
+    expect(stored?.libraries).toEqual([thirdLibraryId, firstLibraryId])
+    expect(stored?.createdAt).toEqual(created)
+  })
+
   it('POST /libraries/:id/books - should fail to add a existing book in a library', async () => {
     const url = new URL('/libraries/01J9W8VR2CFZW8PJ1Q8Y4Y5WEX/books', librariesUrl)
     const body = {
@@ -819,7 +872,7 @@ describe('user-books tests', async () => {
 
     const url = new URL(`user-books/${userBookId}`, testUtils.TESTS_BASE_URL)
 
-    const body = { rating: 6, notes: 'loremipsum' }
+    const body = { rating: 6, notes: 'loremipsum', readingStatus: null, finishedAt: null }
 
     const response = await fetch(url, {
       headers: {
@@ -845,7 +898,7 @@ describe('user-books tests', async () => {
 
     const url = new URL(`user-books/${userBookId}`, testUtils.TESTS_BASE_URL)
 
-    const body = { rating: 6, notes: 'loremipsum' }
+    const body = { rating: 6, notes: 'loremipsum', readingStatus: null, finishedAt: null }
 
     const response = await fetch(url, {
       headers: {

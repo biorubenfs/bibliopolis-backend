@@ -12,7 +12,7 @@ import booksService from '../../resources/books/books.service.js'
 import librariesDao from '../../resources/libraries/libraries.dao.js'
 import userBooksDao from '../../resources/user-books/user-books.dao.js'
 import { BooksSource } from '../../resources/sources/sources.types.js'
-import { DBUserBook } from '../../resources/user-books/user-books.interfaces.js'
+import { DBUserBook, ReadingStatus } from '../../resources/user-books/user-books.interfaces.js'
 
 const booksUrl = new URL('/books', testUtils.TESTS_BASE_URL)
 const user01Id = '01J9BHWZ8N4B1JBSAFCBKQGERS'
@@ -121,6 +121,33 @@ describe('user books indexes', () => {
       .explain('executionStats')
 
     expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+  })
+
+  it('should list the books of a user with a reading status from an index, without sorting in memory', async () => {
+    const plan = await userBooksDao.collection
+      .find({ userId: user01Id, 'libraries.0': { $exists: true }, readingStatus: ReadingStatus.TO_READ })
+      .sort({ _id: -1 })
+      .limit(10)
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+    expect(plan.executionStats.totalKeysExamined).toBe(plan.executionStats.nReturned)
+  })
+
+  it('should list the books read in a year by finish date from an index, without sorting in memory', async () => {
+    const plan = await userBooksDao.collection
+      .find({
+        userId: user01Id,
+        'libraries.0': { $exists: true },
+        readingStatus: ReadingStatus.READ,
+        finishedAt: { $gte: new Date('2026-01-01T00:00:00.000Z'), $lt: new Date('2027-01-01T00:00:00.000Z') }
+      })
+      .sort({ finishedAt: -1, _id: -1 })
+      .limit(10)
+      .explain('executionStats')
+
+    expect(planStages(plan)).toEqual(['IXSCAN', 'FETCH', 'LIMIT'])
+    expect(plan.executionStats.totalKeysExamined).toBe(plan.executionStats.nReturned)
   })
 
   it('should list the books of a library from an index, without sorting in memory', async () => {
