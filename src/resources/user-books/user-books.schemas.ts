@@ -31,11 +31,21 @@ export const userBookUpdateSchema = z.object({
   finishedAt: data.finishedAt == null ? null : new Date(`${data.finishedAt}T00:00:00.000Z`)
 }))
 
+/** In the query, the books without a reading status: null cannot be sent as a query param. */
+export const WITHOUT_READING_STATUS = 'none'
+
 export const userBooksQuerySchema = paginationQuerySchema.extend({
   userId: z.string().optional(),
   libraryId: z.union([z.string(), z.array(z.string())]).optional(),
-  search: z.string().trim().max(100).optional()
-})
+  search: z.string().trim().max(100).optional(),
+  readingStatus: z.union([z.nativeEnum(ReadingStatus), z.literal(WITHOUT_READING_STATUS)])
+    .transform(value => value === WITHOUT_READING_STATUS ? null : value)
+    .optional(),
+  readYear: z.string().regex(/^\d{4}$/, 'readYear must be a year of four digits').transform(Number).optional()
+}).refine(
+  query => query.readYear == null || query.readingStatus === ReadingStatus.READ,
+  { path: ['readYear'], message: 'readYear requires readingStatus=read' }
+)
 
 export const userBooksDownloadQuerySchema = z.object({
   libraryId: z.string(),

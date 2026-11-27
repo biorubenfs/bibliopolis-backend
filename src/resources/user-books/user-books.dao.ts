@@ -1,9 +1,9 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { DBUserBook, SharedUserBook, UpdateUserBook, UserBookOpinion } from './user-books.interfaces.js'
+import { DBUserBook, ReadingStatus, SharedUserBook, UpdateUserBook, UserBookOpinion } from './user-books.interfaces.js'
 import { UserBookEntity } from './user-books.entity.js'
-import { AggregationCursor, ClientSession, Filter, WithId } from 'mongodb'
+import { AggregationCursor, ClientSession, Filter, Sort, WithId } from 'mongodb'
 import { BookEntity } from '../books/books.entity.js'
 import { BookSyncData } from '../books/books.interfaces.js'
 import { ISBNUtils } from '../../utils/isbn.utils.js'
@@ -13,12 +13,16 @@ function dbUserBookToEntity (dbUserBook: DBUserBook | null): UserBookEntity | nu
   return dbUserBook == null ? null : new UserBookEntity(dbUserBook)
 }
 
-interface UserBooksFilter {
+export interface UserBooksFilter {
   librariesIds?: readonly string[]
   /** Only the books that are still in some library: a book removed from its last library keeps its data but is not listed */
   inAnyLibrary?: boolean
   userId?: string
   search?: string
+  /** null for the books without a reading status; undefined does not filter */
+  readingStatus?: ReadingStatus | null
+  /** The books finished that year, in UTC */
+  readYear?: number
 }
 
 /**
@@ -47,8 +51,20 @@ function buildMongoFilter (filters: UserBooksFilter): Filter<DBUserBook> {
     ...(filters.librariesIds != null ? { libraries: { $in: [...filters.librariesIds] } } : {}),
     ...(filters.inAnyLibrary === true ? { 'libraries.0': { $exists: true } } : {}),
     ...(filters.userId != null ? { userId: filters.userId } : {}),
-    ...(filters.search != null && filters.search !== '' ? buildSearchMatch(filters.search) : {})
+    ...(filters.search != null && filters.search !== '' ? buildSearchMatch(filters.search) : {}),
+    ...(filters.readingStatus !== undefined ? { readingStatus: filters.readingStatus } : {}),
+    ...(filters.readYear != null
+      ? { finishedAt: { $gte: new Date(Date.UTC(filters.readYear, 0, 1)), $lt: new Date(Date.UTC(filters.readYear + 1, 0, 1)) } }
+      : {})
   }
+}
+
+/**
+ * Newest first: ULIDs sort by creation time. The read books, by the day they were finished, those without it at the end
+ * (null sorts first in ascending order). The _id breaks the ties, so the pages do not overlap.
+ */
+function buildSort (filters: UserBooksFilter): Sort {
+  return filters.readingStatus === ReadingStatus.READ ? { finishedAt: -1, _id: -1 } : { _id: -1 }
 }
 
 /*
@@ -90,6 +106,9 @@ class UserBooksDao extends Dao<DBUserBook> {
     // Same order as list(), so the pages come out of the index without sorting every book of the user in memory
     await this.collection.createIndex({ userId: 1, _id: -1 })
     await this.collection.createIndex({ userId: 1, libraries: 1, _id: -1 })
+    // The books of a user with a reading status, newest first, and the read ones by the day they were finished
+    await this.collection.createIndex({ userId: 1, readingStatus: 1, _id: -1 })
+    await this.collection.createIndex({ userId: 1, readingStatus: 1, finishedAt: -1, _id: -1 })
     // syncBookData filters by book only: without this index it scans the whole collection
     await this.collection.createIndex({ bookId: 1 })
   }
@@ -151,10 +170,10 @@ class UserBooksDao extends Dao<DBUserBook> {
   }
 
   async list (filters: UserBooksFilter, skip: number, limit: number): Promise<readonly UserBookEntity[]> {
-    // Newest first: ULIDs sort by creation time. Without a sort the pages may overlap
+    // Without a sort the pages may overlap
     const dbUserBooks = await this.collection
       .find(buildMongoFilter(filters))
-      .sort({ _id: -1 })
+      .sort(buildSort(filters))
       .skip(skip)
       .limit(limit)
       .toArray()

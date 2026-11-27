@@ -384,3 +384,128 @@ describe('PATCH /user-books/:id - reading status', () => {
     expect(response.body.validationError[0].path).toEqual([field])
   })
 })
+
+describe('GET /user-books?readingStatus&readYear', () => {
+  const readingId = '01JBSTATUS0000000000000001'
+  const toReadId = '01JBSTATUS0000000000000002'
+
+  function extraBook (_id: string, readingStatus: string, n: number): object {
+    return {
+      _id,
+      libraries: [secondLibraryId],
+      userId: user01Id,
+      bookTitle: `Status book ${n}`,
+      bookAuthors: ['Somebody'],
+      bookId: `01JBSTATUSB00000000000000${n}`,
+      bookIsbn13: `978000000010${n}`,
+      bookIsbn10: null,
+      notes: null,
+      rating: null,
+      readingStatus,
+      finishedAt: null,
+      bookCover: { source: 'open_library', value: null },
+      createdAt: new Date('2000-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2000-01-01T00:00:00.000Z')
+    }
+  }
+
+  async function setStatus (id: string, readingStatus: string | null, finishedAt: string | null): Promise<void> {
+    await userBooksDao.collection.updateOne(
+      { _id: id },
+      { $set: { readingStatus: readingStatus as any, finishedAt: finishedAt == null ? null : new Date(finishedAt) } }
+    )
+  }
+
+  beforeAll(async () => {
+    await setStatus(rossiyaId, 'read', '2026-03-14T00:00:00.000Z')
+    await setStatus(solitudeId, 'read', '2026-01-01T00:00:00.000Z')
+    await setStatus(lightningId, 'read', '2025-12-31T00:00:00.000Z')
+    await setStatus(primerId, 'read', null)
+    await setStatus(itNeverHappenedId, null, null)
+    // Read in 2026, but removed from all its libraries: never listed
+    await setStatus(removedId, 'read', '2026-05-01T00:00:00.000Z')
+    await userBooksDao.collection.insertMany([extraBook(readingId, 'reading', 1), extraBook(toReadId, 'to_read', 2)] as any)
+  })
+
+  afterAll(async () => {
+    await userBooksDao.collection.deleteMany({ _id: { $in: [readingId, toReadId] } })
+  })
+
+  it('should list the read books by the day they were finished, those without it at the end', async () => {
+    const { status, body } = await listUserBooks({ readingStatus: 'read' })
+
+    expect(status).toBe(200)
+    expect(ids(body)).toEqual([rossiyaId, solitudeId, lightningId, primerId])
+    expect(body.paginationInfo.total).toBe(4)
+  })
+
+  it.each([
+    ['reading', [readingId]],
+    ['to_read', [toReadId]],
+    ['none', [itNeverHappenedId]]
+  ])('should list the books with the status %s', async (readingStatus, expected) => {
+    const { status, body } = await listUserBooks({ readingStatus })
+
+    expect(status).toBe(200)
+    expect(ids(body)).toEqual(expected)
+    expect(body.paginationInfo.total).toBe(expected.length)
+  })
+
+  it.each([
+    ['2026', [rossiyaId, solitudeId]],
+    ['2025', [lightningId]],
+    ['2024', []]
+  ])('should list the books read in %s, from the 1st of January to the 31st of December', async (readYear, expected) => {
+    const { status, body } = await listUserBooks({ readingStatus: 'read', readYear })
+
+    expect(status).toBe(200)
+    expect(ids(body)).toEqual(expected)
+    expect(body.paginationInfo.total).toBe(expected.length)
+  })
+
+  it('should combine the status with the library and the search', async () => {
+    const inLibrary = await listUserBooks({ readingStatus: 'read', libraryId: secondLibraryId })
+    const searched = await listUserBooks({ readingStatus: 'read', search: 'primer' })
+    const inLibraryAndYear = await listUserBooks({ readingStatus: 'read', readYear: '2026', libraryId: firstLibraryId })
+
+    expect(ids(inLibrary.body)).toEqual([solitudeId, primerId])
+    expect(ids(searched.body)).toEqual([primerId])
+    expect(ids(inLibraryAndYear.body)).toEqual([rossiyaId])
+  })
+
+  it('should paginate the read books without repeating them', async () => {
+    const pages = await Promise.all([0, 1, 2, 3].map(async (skip) =>
+      await listUserBooks({ readingStatus: 'read', skip: String(skip), limit: '1' })
+    ))
+
+    expect(pages.flatMap((page) => ids(page.body))).toEqual([rossiyaId, solitudeId, lightningId, primerId])
+  })
+
+  it('should keep the newest first with any other status', async () => {
+    const { body } = await listUserBooks({ libraryId: secondLibraryId })
+
+    expect(ids(body)).toEqual([...ids(body)].sort().reverse())
+  })
+
+  it('should reject an unknown status', async () => {
+    const { status, body } = await listUserBooks({ readingStatus: 'abandoned' })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['readingStatus'])
+  })
+
+  it.each(['26', '2026-01', 'abcd'])('should reject the year %s', async (readYear) => {
+    const { status, body } = await listUserBooks({ readingStatus: 'read', readYear })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['readYear'])
+  })
+
+  it.each<Record<string, string>>([{}, { readingStatus: 'reading' }, { readingStatus: 'none' }])('should reject a year without the status read: %j', async (params) => {
+    const { status, body } = await listUserBooks({ ...params, readYear: '2026' })
+
+    expect(status).toBe(400)
+    expect(body.validationError[0].path).toEqual(['readYear'])
+    expect(body.validationError[0].message).toBe('readYear requires readingStatus=read')
+  })
+})

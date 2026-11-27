@@ -25,19 +25,23 @@ Atributos de un user book:
 
 ## GET /user-books
 
-Lista los user books. Admite [paginación](../index.md#paginacion), filtros por biblioteca y por usuario, y búsqueda de texto.
+Lista los user books. Admite [paginación](../index.md#paginacion), filtros por biblioteca, por usuario, por estado de lectura y por año de lectura, y búsqueda de texto.
 
 - Un usuario normal solo puede listar sus propios user books de sus bibliotecas. Si no indica `libraryId`, se listan los de todas sus bibliotecas.
 
-Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo, también con `search`.
+Los resultados se ordenan por ID de forma descendente, es decir, del añadido más recientemente al más antiguo, también con `search`. Con `readingStatus=read` se ordenan por `finishedAt` descendente (del terminado más recientemente al más antiguo), con los leídos sin fecha al final; los empates se ordenan por ID descendente.
 
 ### Query Params
 
 - `libraryId`: string (opcional, se puede repetir) — Acota la búsqueda a una o varias bibliotecas (`?libraryId=A&libraryId=B`)
 - `userId`: string (opcional) — Acota el listado a los user books de un usuario. Un usuario normal solo puede indicar su propio ID
 - `search`: string (opcional, máx. 100 caracteres) — Si es un ISBN-10 o ISBN-13 válido (con o sin guiones), busca los user books con ese ISBN exacto. Si no, devuelve los que contienen el texto en el título, en algún autor o en los ISBN, aunque sea parte de una palabra (`ossi` encuentra «Rossiya»). Se busca de forma literal y sin distinguir mayúsculas y minúsculas, pero sí tildes. Se eliminan los espacios al principio y al final; una búsqueda vacía se ignora. Se combina con `libraryId`, y el `total` de `paginationInfo` cuenta solo los user books que coinciden
+- `readingStatus`: string (opcional) — `to_read`, `reading`, `read`, o `none` para los user books sin estado. Se combina con los demás filtros
+- `readYear`: number (opcional, cuatro cifras) — Solo con `readingStatus=read`: los user books terminados ese año (`finishedAt` del 1 de enero al 31 de diciembre). Los leídos sin fecha no salen en ningún año
 - `skip`: number (opcional) — Elementos a omitir
 - `limit`: number (opcional) — Límite de resultados
+
+Ejemplo: `GET /user-books?readingStatus=read&readYear=2026` lista los libros leídos en 2026.
 
 ### Respuestas
 
@@ -77,7 +81,7 @@ Los resultados se ordenan por ID de forma descendente, es decir, del añadido m�
 
 #### 400 Bad Request
 
-Parámetros de paginación no válidos, o `search` repetido o con más de 100 caracteres.
+Parámetros de paginación no válidos, `search` repetido o con más de 100 caracteres, `readingStatus` desconocido, `readYear` que no es un año de cuatro cifras, o `readYear` sin `readingStatus=read` (mensaje `readYear requires readingStatus=read`).
 
 ```json
 {

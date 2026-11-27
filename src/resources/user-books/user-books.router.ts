@@ -9,7 +9,7 @@ import { queryParamsValidator } from '../../middlewares/query-params-validator.m
 const userBooksRouter = Router()
 
 userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), handler(async (req) => {
-  const { skip, limit, userId, libraryId, search } = req.query
+  const { skip, limit, userId, libraryId, search, readingStatus, readYear } = req.query
   // normalize libraryId to array
   const librariesIds = libraryId != null
     ? Array.isArray(libraryId) ? libraryId : [libraryId]
@@ -17,7 +17,9 @@ userBooksRouter.get('/', queryParamsValidator(userBooksQuerySchema), handler(asy
   const filter = {
     userId,
     librariesIds,
-    search
+    search,
+    readingStatus,
+    readYear
   }
   const result = await userBooksService.list(
     { skip, limit },
