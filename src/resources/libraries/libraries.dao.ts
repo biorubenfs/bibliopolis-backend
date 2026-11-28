@@ -136,6 +136,16 @@ class LibrariesDao extends Dao<DBLibrary> {
     return dbLibraries.map(dbLibrary => dbLibraryToEntity(dbLibrary)).filter(isNotNull)
   }
 
+  /** The names of the given libraries, by id. The ones that no longer exist are not in it. */
+  async findNamesByIds (ids: readonly string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map()
+    const dbLibraries = await this.collection
+      .find({ _id: { $in: [...ids] } })
+      .project<Pick<DBLibrary, '_id' | 'name'>>({ name: 1 })
+      .toArray()
+    return new Map(dbLibraries.map(library => [library._id, library.name]))
+  }
+
   /** How many of the given libraries belong to the user. */
   async countByIds (ids: readonly string[], userId: string): Promise<number> {
     return await this.collection.countDocuments({ _id: { $in: [...ids] }, userId })
@@ -156,7 +166,7 @@ class LibrariesDao extends Dao<DBLibrary> {
    * Adds a member, or returns null if the library does not exist, is full or already has that member. The filter makes
    * it atomic: neither the same user nor one over the limit can be added by simultaneous invitations.
    */
-  async addMember (libraryId: string, userId: string): Promise<LibraryMember | null> {
+  async addMember (libraryId: string, userId: string, session?: ClientSession): Promise<LibraryMember | null> {
     const member: LibraryMember = { userId, createdAt: new Date() }
     const result = await this.collection.updateOne(
       {
@@ -164,16 +174,18 @@ class LibrariesDao extends Dao<DBLibrary> {
         'members.userId': { $ne: userId },
         [`members.${MAX_MEMBERS_PER_LIBRARY - 1}`]: { $exists: false }
       },
-      { $push: { members: member } }
+      { $push: { members: member } },
+      { session }
     )
     return result.modifiedCount > 0 ? member : null
   }
 
   /** Whether the user was a member. */
-  async removeMember (libraryId: string, userId: string): Promise<boolean> {
+  async removeMember (libraryId: string, userId: string, session?: ClientSession): Promise<boolean> {
     const result = await this.collection.updateOne(
       { _id: libraryId, 'members.userId': userId },
-      { $pull: { members: { userId } } }
+      { $pull: { members: { userId } } },
+      { session }
     )
     return result.modifiedCount > 0
   }

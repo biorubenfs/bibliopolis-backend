@@ -51,7 +51,7 @@ async function memberIds (libraryId = firstLibraryId): Promise<string[]> {
 
 function newUser (id: string, email: string, name: string): DBUser {
   const now = new Date()
-  return { _id: id, email, name, password: 'not-a-hash', avatar: 'base64', role: Role.Regular, createdAt: now, updatedAt: now }
+  return { _id: id, email, name, password: 'not-a-hash', avatar: 'base64', role: Role.Regular, notificationPreferences: { libraryShared: true }, createdAt: now, updatedAt: now }
 }
 
 beforeAll(async () => {

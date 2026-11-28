@@ -1,11 +1,11 @@
 import { ulid } from 'ulid'
 import Dao from '../../dao.js'
 import { UserEntity } from './users.entity.js'
-import { CreateUser, DBUser, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
+import { CreateUser, DBUser, DEFAULT_NOTIFICATION_PREFERENCES, NotificationPreferences, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
 import config from '../../config.js'
 import bcrypt from 'bcryptjs'
 import { escapeRegExp, isNotNull } from '../../utils.js'
-import { Filter } from 'mongodb'
+import { ClientSession, Filter } from 'mongodb'
 
 function listUsersMongoFilter (filter: UsersListFilter): Filter<DBUser> {
   if (filter.search == null || filter.search === '') return {}
@@ -78,16 +78,17 @@ class UsersDao extends Dao<DBUser> {
     return dbUsers.map(dbUser => dbUser._id)
   }
 
-  async create (newUserData: CreateUser, role: Role): Promise<UserEntity> {
+  async create (newUserData: CreateUser, role: Role, session?: ClientSession): Promise<UserEntity> {
     const now = new Date()
     const dbUser: DBUser = {
       ...newUserData,
       _id: ulid(),
       role,
+      notificationPreferences: { ...DEFAULT_NOTIFICATION_PREFERENCES },
       createdAt: now,
       updatedAt: now
     }
-    await this.collection.insertOne(dbUser)
+    await this.collection.insertOne(dbUser, { session })
 
     return new UserEntity(dbUser)
   }
@@ -117,6 +118,19 @@ class UsersDao extends Dao<DBUser> {
         $set: {
           password: newPassword
         },
+        $currentDate: { updatedAt: true }
+      },
+      { returnDocument: 'after' }
+    )
+
+    return dbUserToEntity(user)
+  }
+
+  async updateNotificationPreferences (userId: string, preferences: NotificationPreferences): Promise<UserEntity | null> {
+    const user = await this.collection.findOneAndUpdate(
+      { _id: userId },
+      {
+        $set: { notificationPreferences: preferences },
         $currentDate: { updatedAt: true }
       },
       { returnDocument: 'after' }

@@ -5,6 +5,13 @@ import { UserEntity } from './users.entity.js'
 export type CreateUser = Pick<UserEntity, 'name' | 'email' | 'password' | 'avatar'>
 export type UpdateUser = Pick<UserEntity, 'name' | 'avatar'>
 export type DBUser = Omit<UserEntity, 'id' | 'type' | 'attributes' | 'toResult'> & { _id: string }
+/** The notifications the user can turn off. The welcome notification is not one of them. */
+export interface NotificationPreferences {
+  libraryShared: boolean
+}
+
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = { libraryShared: true }
+
 export enum Role {
   Regular = 'regular',
   Admin = 'admin'

@@ -2,8 +2,8 @@ import { Router } from 'express'
 import usersService from './users.service.js'
 import handler from '../../handler.js'
 import bodyValidator from '../../middlewares/body-validator.middleware.js'
-import { createUserSchema, updatePasswordSchema, updateUserSchema, usersQuerySchema } from './users.schemas.js'
-import { checkAdmin } from '../../middlewares/jwt.middleware.js'
+import { createUserSchema, updateNotificationPreferencesSchema, updatePasswordSchema, updateUserSchema, usersQuerySchema } from './users.schemas.js'
+import { checkAdmin, checkRegular } from '../../middlewares/jwt.middleware.js'
 import { queryParamsValidator } from '../../middlewares/query-params-validator.middleware.js'
 import { HttpStatusCode } from '../../types.js'
 
@@ -28,6 +28,12 @@ usersRouter.get('/', checkAdmin, queryParamsValidator(usersQuerySchema), handler
 
 usersRouter.patch('/me/password', bodyValidator(updatePasswordSchema), handler(async (req) => {
   const result = await usersService.updatePassword(req.userId ?? '', req.body.currentPassword, req.body.newPassword)
+  return { status: HttpStatusCode.OK, data: result }
+}))
+
+// Admins get no notifications
+usersRouter.patch('/me/notification-preferences', checkRegular, bodyValidator(updateNotificationPreferencesSchema), handler(async (req) => {
+  const result = await usersService.updateNotificationPreferences(req.userId ?? '', req.body)
   return { status: HttpStatusCode.OK, data: result }
 }))
 

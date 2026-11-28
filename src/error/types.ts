@@ -19,5 +19,6 @@ export enum ApiRestErrorCode {
   ImportAlreadyActive = 'IMPORT ALREADY ACTIVE',
   TagLimitReached = 'TAG LIMIT REACHED',
   LibraryMembersLimitReached = 'LIBRARY MEMBERS LIMIT REACHED',
-  CoverNotAvailable = 'COVER NOT AVAILABLE'
+  CoverNotAvailable = 'COVER NOT AVAILABLE',
+  InvalidTemplateVariable = 'INVALID TEMPLATE VARIABLE'
 }

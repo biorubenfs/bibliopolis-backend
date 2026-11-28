@@ -1,5 +1,6 @@
 import { CollectionResultObject, SingleResultObject } from '../../results.js'
 import { runInTransaction } from '../../transaction-helper.js'
+import notificationsDao from '../notifications/notifications.dao.js'
 import { Page } from '../../types.js'
 import { BookNotFoundError } from '../books/books.error.js'
 import { NewBook } from '../books/books.interfaces.js'
@@ -86,6 +87,7 @@ class LibrariesService {
       await userBooksDao.deleteAll(id, library.entity.userId, session)
       await importItemsDao.deleteByImports(await importsDao.findIdsByLibrary(id, session), session)
       await importsDao.deleteByLibrary(id, session)
+      await notificationsDao.deleteLibraryShared(id, null, session)
       // runInTransaction treats a null or undefined result as an aborted transaction
       return true
     })

@@ -5,6 +5,9 @@ import { LibraryNotFoundError } from '../libraries/libraries.error.js'
 import { LibraryMember } from '../libraries/libraries.interfaces.js'
 import librariesService from '../libraries/libraries.service.js'
 import usersDao from '../users/users.dao.js'
+import notificationsDao from '../notifications/notifications.dao.js'
+import notificationsService from '../notifications/notifications.service.js'
+import { runInTransaction } from '../../transaction-helper.js'
 import { UserNotFoundError } from '../users/users.error.js'
 import { Role } from '../users/users.interfaces.js'
 import { MAX_MEMBERS_PER_LIBRARY } from './library-members.constants.js'
@@ -42,7 +45,7 @@ class LibraryMembersService {
   }
 
   async invite (libraryId: string, email: string, ownerId: string): Promise<SingleResultObject<LibraryMemberEntity>> {
-    await librariesService.get(libraryId, ownerId)
+    const library = await librariesService.get(libraryId, ownerId)
 
     const user = await usersDao.findByEmail(email)
     // An admin has no access to the libraries: for the owner, it is as if the account did not exist
@@ -53,19 +56,31 @@ class LibraryMembersService {
       throw new OwnerCannotBeMemberError('the owner cannot be a member of the library')
     }
 
-    const member = await librariesDao.addMember(libraryId, user.id)
-    if (member == null) {
-      throw await this.explainRejectedMember(libraryId, user.id)
-    }
+    // Only a fallback: the name shown is looked up when the notification is read
+    const ownerName = (await usersDao.findById(ownerId))?.name ?? ''
+
+    const member = await runInTransaction(async (session) => {
+      const added = await librariesDao.addMember(libraryId, user.id, session)
+      if (added == null) {
+        throw await this.explainRejectedMember(libraryId, user.id)
+      }
+      await notificationsService.notifyLibraryShared(user, library.entity, { id: ownerId, name: ownerName }, session)
+      return added
+    })
     return new SingleResultObject(new LibraryMemberEntity(member, user))
   }
 
   async remove (libraryId: string, memberUserId: string, ownerId: string): Promise<void> {
     await librariesService.get(libraryId, ownerId)
 
-    if (!await librariesDao.removeMember(libraryId, memberUserId)) {
-      throw new LibraryMemberNotFoundError('member not found')
-    }
+    await runInTransaction(async (session) => {
+      if (!await librariesDao.removeMember(libraryId, memberUserId, session)) {
+        throw new LibraryMemberNotFoundError('member not found')
+      }
+      // Without access, the notification would lead nowhere
+      await notificationsDao.deleteLibraryShared(libraryId, memberUserId, session)
+      return true
+    })
   }
 }
 

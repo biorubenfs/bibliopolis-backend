@@ -7,6 +7,8 @@ import userBooksDao from '../user-books/user-books.dao.js'
 import userBooksService from '../user-books/user-books.service.js'
 import { DownloadFormat } from '../user-books/user-books.interfaces.js'
 import usersDao from '../users/users.dao.js'
+import notificationsDao from '../notifications/notifications.dao.js'
+import { runInTransaction } from '../../transaction-helper.js'
 import { SharedLibraryEntity } from './shared-libraries.entity.js'
 import { SharedLibraryOwnerEntity } from './shared-library-owners.entity.js'
 import { SharedLibraryBookEntity } from './shared-library-books.entity.js'
@@ -96,9 +98,13 @@ class SharedLibrariesService {
   }
 
   async leave (libraryId: string, userId: string): Promise<void> {
-    if (!await librariesDao.removeMember(libraryId, userId)) {
-      throw new LibraryNotFoundError('library not found')
-    }
+    await runInTransaction(async (session) => {
+      if (!await librariesDao.removeMember(libraryId, userId, session)) {
+        throw new LibraryNotFoundError('library not found')
+      }
+      await notificationsDao.deleteLibraryShared(libraryId, userId, session)
+      return true
+    })
   }
 }
 

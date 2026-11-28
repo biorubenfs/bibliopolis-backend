@@ -23,6 +23,10 @@ export const updateUserSchema = z.object({
   name: z.string().trim().min(1)
 })
 
+export const updateNotificationPreferencesSchema = z.object({
+  libraryShared: z.boolean()
+}).strict()
+
 export const usersQuerySchema = paginationQuerySchema.extend({
   search: z.string().trim().max(100).optional()
 })

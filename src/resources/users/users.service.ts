@@ -1,6 +1,6 @@
 import usersDao from './users.dao.js'
 import { CollectionResultObject, SingleResultObject } from '../../results.js'
-import { CreateUser, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
+import { CreateUser, NotificationPreferences, Role, UpdateUser, UsersListFilter } from './users.interfaces.js'
 import bcrypt from 'bcryptjs'
 import config from '../../config.js'
 import { InvalidCurrentPassword, UserEmailAlreadyExists, UserNotFoundError, UserPasswordResetForbiddenError } from './users.error.js'
@@ -11,6 +11,8 @@ import { transformImageToBase64 } from '../../utils.js'
 import logger from '../../logger.js'
 import { MongoServerError } from 'mongodb'
 import { generatePassword } from './users.utils.js'
+import { runInTransaction } from '../../transaction-helper.js'
+import notificationsService from '../notifications/notifications.service.js'
 
 const DEFAULT_AVATAR_BASE64 = '' // TODO: add a default avatar
 
@@ -38,7 +40,12 @@ class UsersService {
     }
 
     try {
-      const newUser = await usersDao.create(userData, Role.Regular)
+      // Only users created from here get the welcome notification: the ones that already existed never do
+      const newUser = await runInTransaction(async (session) => {
+        const user = await usersDao.create(userData, Role.Regular, session)
+        await notificationsService.notifyWelcome(user, session)
+        return user
+      })
       return new SingleResultObject(newUser, { password })
     } catch (error) {
       // The unique index catches the concurrent signups that passed the check above
@@ -117,6 +124,15 @@ class UsersService {
       avatar: await this.generateAvatar(data.name)
     }
     const updUser = await usersDao.updateUser(userId, updData)
+    if (updUser == null) {
+      throw new UserNotFoundError('user not found')
+    }
+
+    return new SingleResultObject(updUser)
+  }
+
+  async updateNotificationPreferences (userId: string, preferences: NotificationPreferences): Promise<SingleResultObject<UserEntity>> {
+    const updUser = await usersDao.updateNotificationPreferences(userId, preferences)
     if (updUser == null) {
       throw new UserNotFoundError('user not found')
     }

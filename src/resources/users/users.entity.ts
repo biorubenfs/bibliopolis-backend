@@ -1,5 +1,5 @@
 import { EntityType, Entity } from '../../entity.js'
-import { DBUser, Role } from './users.interfaces.js'
+import { DBUser, NotificationPreferences, Role } from './users.interfaces.js'
 
 export class UserEntity extends Entity<EntityType.Users> {
   readonly name: string
@@ -7,6 +7,7 @@ export class UserEntity extends Entity<EntityType.Users> {
   readonly password: string
   readonly role: Role
   readonly avatar: string
+  readonly notificationPreferences: NotificationPreferences
   readonly createdAt: Date
   readonly updatedAt: Date
 
@@ -17,6 +18,7 @@ export class UserEntity extends Entity<EntityType.Users> {
     this.password = data.password
     this.role = data.role
     this.avatar = data.avatar
+    this.notificationPreferences = data.notificationPreferences
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
   }
@@ -27,6 +29,7 @@ export class UserEntity extends Entity<EntityType.Users> {
       email: this.email,
       role: this.role,
       avatar: this.avatar,
+      notificationPreferences: this.notificationPreferences,
       createdAt: this.createdAt,
       updatedAt: this.updatedAt
     }

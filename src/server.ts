@@ -5,7 +5,7 @@ import errorHandler from './error/error-handler.js'
 import authRouter from './resources/auth/auth.router.js'
 import booksRouter from './resources/books/books.router.js'
 import librariesRouter from './resources/libraries/libraries.router.js'
-import { checkJwt, checkRegular } from './middlewares/jwt.middleware.js'
+import { checkAdmin, checkJwt, checkRegular } from './middlewares/jwt.middleware.js'
 import logger from './logger.js'
 import config from './config.js'
 import cors from 'cors'
@@ -15,6 +15,8 @@ import externalRouter from './resources/external/external.router.js'
 import importsRouter from './resources/imports/imports.router.js'
 import sharedLibrariesRouter from './resources/shared-libraries/shared-libraries.router.js'
 import tagsRouter from './resources/tags/tags.router.js'
+import notificationsRouter from './resources/notifications/notifications.router.js'
+import notificationTemplatesRouter from './resources/notification-templates/notification-templates.router.js'
 
 import { readFile } from 'fs/promises'
 const pkg = JSON.parse(await readFile('./package.json', 'utf-8'))
@@ -70,6 +72,8 @@ export default class Server {
     this.express.use('/external', externalRouter)
     this.express.use('/imports', checkRegular, importsRouter)
     this.express.use('/tags', checkRegular, tagsRouter)
+    this.express.use('/notifications', checkRegular, notificationsRouter)
+    this.express.use('/notification-templates', checkAdmin, notificationTemplatesRouter)
 
     // error handling
     this.express.use(errorHandler)
