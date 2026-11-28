@@ -104,6 +104,9 @@ Devuelve los datos del usuario autenticado a partir del token enviado en la cabe
       "email": "user01@email.com",
       "role": "regular",
       "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "notificationPreferences": {
+        "libraryShared": true
+      },
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2000-01-01T00:00:00.000Z"
     }

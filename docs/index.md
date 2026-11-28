@@ -15,6 +15,8 @@ API REST de Bibliopolis para gestionar usuarios, sus bibliotecas personales y lo
 | [External](api/external.md)      | `/external`   | Búsqueda de un libro por ISBN en el catálogo y en las fuentes externas   |
 | [Imports](api/imports.md)        | `/imports`    | Importación de libros a una biblioteca desde un fichero CSV              |
 | [Tags](api/tags.md)              | `/tags`       | Etiquetas para clasificar y filtrar las bibliotecas                      |
+| [Notifications](api/notifications.md) | `/notifications` | Notificaciones del usuario dentro de la aplicación              |
+| [Notification Templates](api/notification-templates.md) | `/notification-templates` | Textos de las notificaciones, editables por los administradores |
 
 Además, `GET /` es un endpoint público de estado:
 
@@ -52,7 +54,7 @@ Errores de permisos por rol (`403 Forbidden`):
 | `errorCode`        | `message`                | Causa                                                                  |
 | ------------------ | ------------------------ | ---------------------------------------------------------------------- |
 | `PERMISSION ERROR` | `must be admin`          | El endpoint requiere rol `admin`                                       |
-| `PERMISSION ERROR` | `must be a regular user` | El endpoint es solo para usuarios normales (`/libraries`, `/shared-libraries`, `/user-books`, `/imports`, `/tags`) |
+| `PERMISSION ERROR` | `must be a regular user` | El endpoint es solo para usuarios normales (`/libraries`, `/shared-libraries`, `/user-books`, `/imports`, `/tags`, `/notifications`) |
 
 ## Formato de las respuestas
 
@@ -141,6 +143,7 @@ Todos los errores tienen el mismo formato:
 | 400    | `IMPORT TOO MANY ROWS`      | El fichero de una importación supera el límite de filas           |
 | 400    | `IMPORT WITHOUT ISBN COLUMN` | El fichero de una importación no tiene columna de ISBN           |
 | 400    | `IMPORT WITHOUT VALID ISBN` | El fichero de una importación no tiene ninguna fila válida        |
+| 400    | `INVALID TEMPLATE VARIABLE` | Una plantilla de notificación usa una variable que su tipo no ofrece, o llaves mal cerradas |
 | 401    | `TOKEN NOT PROVIDED ERROR`  | Falta el token                                                    |
 | 401    | `INVALID TOKEN ERROR`       | Token no válido o caducado                                        |
 | 403    | `INVALID CREDENTIALS ERROR` | Email o contraseña incorrectos en el login                        |

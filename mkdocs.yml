@@ -15,3 +15,5 @@ nav:
       - External: api/external.md
       - Imports: api/imports.md
       - Tags: api/tags.md
+      - Notifications: api/notifications.md
+      - Notification Templates: api/notification-templates.md

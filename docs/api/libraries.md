@@ -300,7 +300,7 @@ Elimina una biblioteca. Solo el propietario puede eliminarla.
 
 Los user books de la biblioteca **no se eliminan**: solo se quita la biblioteca de su lista `libraries`.
 
-Sus [importaciones](imports.md) y los informes de estas **sí se eliminan**, y sus miembros pierden el acceso.
+Sus [importaciones](imports.md) y los informes de estas **sí se eliminan**, y sus miembros pierden el acceso. También se eliminan las [notificaciones](notifications.md) de los miembros que avisaban de que se había compartido.
 
 ### Respuestas
 
@@ -506,6 +506,8 @@ La biblioteca no existe.
 
 Da acceso de solo lectura a un usuario, hasta un máximo de 20 por biblioteca. El acceso es inmediato: el usuario no tiene que aceptarlo, y puede salir con [`DELETE /shared-libraries/:id`](shared-libraries.md#delete-shared-librariesid). Solo el propietario puede invitar.
 
+El usuario invitado recibe una [notificación](notifications.md#tipos) `library-shared`, salvo que la haya desactivado en sus [preferencias](users.md#patch-usersmenotification-preferences). Se crea en la misma transacción que el acceso: si la invitación falla, no hay notificación.
+
 ### Body
 
 ```json
@@ -605,7 +607,7 @@ Más de 20 invitaciones fallidas del mismo usuario, sea cual sea el error, en 15
 
 ## DELETE /libraries/:id/members/:userId
 
-Retira el acceso a un miembro, con efecto inmediato. Solo el propietario puede retirarlo.
+Retira el acceso a un miembro, con efecto inmediato. Solo el propietario puede retirarlo. El miembro no recibe ningún aviso, y se elimina su [notificación](notifications.md) de que se le había compartido la biblioteca.
 
 ### Respuestas
 

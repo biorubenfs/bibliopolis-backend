@@ -254,7 +254,7 @@ La biblioteca no existe o no está compartida con el usuario.
 
 ## DELETE /shared-libraries/:id
 
-El usuario autenticado sale de una biblioteca compartida con él. La biblioteca y sus libros no cambian, y los demás miembros conservan el acceso. Para volver a entrar, el propietario debe invitarlo de nuevo.
+El usuario autenticado sale de una biblioteca compartida con él. La biblioteca y sus libros no cambian, y los demás miembros conservan el acceso. Para volver a entrar, el propietario debe invitarlo de nuevo. Se elimina su [notificación](notifications.md) de que se le había compartido la biblioteca.
 
 ### Respuestas
 

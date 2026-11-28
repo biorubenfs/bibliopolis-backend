@@ -10,6 +10,7 @@ Atributos de un usuario:
 | `email`            | string | Email del usuario, en minúsculas. Es único                     |
 | `role`             | string | `regular` o `admin`                                            |
 | `avatar`           | string | Imagen del avatar (PNG) codificada en base64, generada con RoboHash a partir del nombre. Puede ser una cadena vacía si no se pudo generar |
+| `notificationPreferences` | object | Qué [notificaciones](notifications.md) quiere recibir el usuario: `{ "libraryShared": boolean }`. `true` al crear el usuario. Los administradores también lo tienen, pero no reciben notificaciones |
 | `createdAt`        | date   | Fecha de creación                                              |
 | `updatedAt`        | date   | Fecha de la última modificación                                |
 
@@ -35,6 +36,8 @@ La contraseña tiene 12 caracteres sin los que se confunden fácilmente (`0`, `O
 
 No se admite ningún otro campo (tampoco `password` ni `role`).
 
+El usuario recibe una [notificación de bienvenida](notifications.md#tipos), en la misma transacción en la que se crea. Es la única vez que se genera: los usuarios que ya existían no la reciben.
+
 ### Respuestas
 
 #### 201 Created
@@ -49,6 +52,9 @@ No se admite ningún otro campo (tampoco `password` ni `role`).
       "email": "user02@email.com",
       "role": "regular",
       "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "notificationPreferences": {
+        "libraryShared": true
+      },
       "createdAt": "2026-02-14T23:33:56.859Z",
       "updatedAt": "2026-02-14T23:33:56.859Z"
     }
@@ -109,6 +115,9 @@ Las sesiones abiertas del usuario siguen siendo válidas hasta que caduca su tok
       "email": "user01@email.com",
       "role": "regular",
       "avatar": "iVBORw0KGgoAAAANSUhEUgAA...",
+      "notificationPreferences": {
+        "libraryShared": true
+      },
       "createdAt": "2000-01-01T00:00:00.000Z",
       "updatedAt": "2026-02-14T23:33:56.859Z"
     }
@@ -167,6 +176,9 @@ Lista los usuarios, del más reciente al más antiguo. **Solo administradores.**
         "name": "user01",
         "email": "user01@email.com",
         "role": "regular",
+        "notificationPreferences": {
+          "libraryShared": true
+        },
         "createdAt": "2000-01-01T00:00:00.000Z",
         "updatedAt": "2000-01-01T00:00:00.000Z"
       }
@@ -237,6 +249,46 @@ Devuelve el usuario actualizado (mismo formato que [`GET /auth/me`](auth.md#get-
 #### 400 Bad Request
 
 Body no válido.
+
+#### 404 Not Found
+
+El usuario no existe.
+
+---
+
+## PATCH /users/me/notification-preferences
+
+Cambia las preferencias de [notificaciones](notifications.md) del usuario autenticado. **Solo usuarios `regular`**: un administrador recibe un `403` (`must be a regular user`).
+
+Desactivar un tipo significa que **no se generan** notificaciones de ese tipo mientras siga desactivado; las que ya tenía el usuario no cambian. La bienvenida no se puede desactivar.
+
+### Body
+
+```json
+{
+  "libraryShared": false
+}
+```
+
+| Campo           | Tipo    | Requerido | Descripción                                                        |
+| --------------- | ------- | --------- | ------------------------------------------------------------------ |
+| `libraryShared` | boolean | Sí        | Si el usuario recibe una notificación cuando le comparten una biblioteca |
+
+No se admite ningún otro campo.
+
+### Respuestas
+
+#### 200 OK
+
+Devuelve el usuario actualizado (mismo formato que [`GET /auth/me`](auth.md#get-authme)).
+
+#### 400 Bad Request
+
+Body no válido: falta `libraryShared`, no es un booleano o hay campos no admitidos.
+
+#### 403 Forbidden
+
+El usuario es administrador.
 
 #### 404 Not Found
 
